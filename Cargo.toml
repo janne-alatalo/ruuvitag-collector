@@ -1,0 +1,9 @@
+[package]
+name = "dbus-test"
+version = "0.1.0"
+authors = ["Janne Alatalo <alatalo.janne@gmail.com>"]
+
+[dependencies]
+dbus = "0.6.1"
+log = "0.4"
+env_logger = "0.5.3"
