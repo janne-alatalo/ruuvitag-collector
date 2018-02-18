@@ -1,7 +1,7 @@
-
 use std::io;
 use std::error;
 use dbus;
+use device;
 
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
@@ -56,6 +56,35 @@ impl DbusBluez {
         info!("Bluetooth discovering!");
         Ok(())
 
+    }
+
+    pub fn get_managed_devices(&self) -> Result<Vec<String>, Box<error::Error>> {
+        let msg = dbus::Message::new_method_call(BLUEZ_SERVICE, "/",
+                                             "org.freedesktop.DBus.ObjectManager",
+                                             "GetManagedObjects")?;
+        // Similar implementation as here:
+        // https://github.com/szeged/blurz/blob/7729c462439fb692f12e385a84ab371423eb4cd6/src/bluetooth_utils.rs#L53
+        let result = self.conn.send_with_reply_and_block(msg, 3000)?;
+        let result_vec = result.get_items();
+        let items: &[dbus::MessageItem] = result_vec.get(0).unwrap().inner().unwrap();
+        for i in items {
+            let (path, ifs) = i.inner().unwrap();
+            let interfaces: &[dbus::MessageItem] = ifs.inner().unwrap();
+            for intf in interfaces {
+                let (intf_tmp, _) = intf.inner().unwrap();
+                let intf_str: &str = intf_tmp.inner().unwrap();
+                if intf_str == "org.bluez.Device1" {
+                    let path_str: &str = path.inner().unwrap();
+                    println!("{:?}", path_str);
+                }
+            }
+        }
+        Ok(Vec::new())
+    }
+
+    pub fn get_devices(&self) -> Result<Vec<device::Device>, Box<error::Error>> {
+        let managed = self.get_managed_devices();
+        Err(Box::new(io::Error::new(io::ErrorKind::Other, "Test")))
     }
 
 }

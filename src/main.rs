@@ -4,10 +4,12 @@ extern crate env_logger;
 extern crate dbus;
 
 mod dbus_bluez;
+mod device;
 
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let dbus = dbus_bluez::DbusBluez::new()?;
     dbus.initialize()?;
+    dbus.get_devices()?;
     Ok(())
 }
 
