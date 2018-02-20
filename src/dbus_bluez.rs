@@ -27,7 +27,19 @@ impl DbusBluez {
 
     pub fn initialize(&self) -> Result<(), Box<error::Error>> {
 
-        let props = Props::new(&self.conn, BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, 500);
+        let props = Props::new(
+            &self.conn, BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, 500);
+        self.poweron_interface(&props)?;
+        self.set_discovery_filter()?;
+        self.start_discovering(&props)?;
+
+        info!("Bluetooth discovering!");
+        Ok(())
+
+    }
+
+    fn poweron_interface(&self, props: &Props) -> Result<(), Box<error::Error>> {
+
         let mut is_powered = match props.get("Powered")? {
             MessageItem::Bool(b) => { b },
             _ => { panic!("Not the type that was expected!") },
@@ -47,20 +59,6 @@ impl DbusBluez {
             }
         }
 
-        self.set_discovery_filter()?;
-
-        let msg = Message::new_method_call(
-            BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
-        self.conn.send_with_reply_and_block(msg, 1000)?;
-        let is_discovering = match props.get("Discovering")? {
-            MessageItem::Bool(b) => { b },
-            _ => { panic!("Not the type that was expected!") },
-        };
-        if !is_discovering {
-            return Err(Box::new(io::Error::new(
-                        io::ErrorKind::Other, "Can't set bluetooth to discover mode")))
-        }
-        info!("Bluetooth discovering!");
         Ok(())
 
     }
@@ -101,6 +99,24 @@ impl DbusBluez {
 
     }
 
+    fn start_discovering(&self, props: &Props) -> Result<(), Box<error::Error>> {
+
+        let msg = Message::new_method_call(
+            BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
+        self.conn.send_with_reply_and_block(msg, 1000)?;
+        let is_discovering = match props.get("Discovering")? {
+            MessageItem::Bool(b) => { b },
+            _ => { panic!("Not the type that was expected!") },
+        };
+        if !is_discovering {
+            return Err(Box::new(io::Error::new(
+                        io::ErrorKind::Other, "Can't set bluetooth to discover mode")))
+        }
+
+        Ok(())
+
+    }
+
     pub fn get_managed_devices(&self) -> Result<Vec<String>, Box<error::Error>> {
         let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
                                              "org.freedesktop.DBus.ObjectManager",
@@ -127,7 +143,8 @@ impl DbusBluez {
 
     pub fn get_devices(&self) -> Result<Vec<device::Device>, Box<error::Error>> {
         let managed = self.get_managed_devices();
-        Err(Box::new(io::Error::new(io::ErrorKind::Other, "Test")))
+        Err(Box::new(io::Error::new(
+                    io::ErrorKind::Other, "Not implemented yet!")))
     }
 
 }
