@@ -126,6 +126,7 @@ impl DbusBluez {
         let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
                                              "org.freedesktop.DBus.ObjectManager",
                                              "GetManagedObjects")?;
+        let mut devices: Vec<String> = Vec::new();
         // Similar implementation as here:
         // https://github.com/szeged/blurz/blob/7729c462439fb692f12e385a84ab371423eb4cd6/src/bluetooth_utils.rs#L53
         let result = self.conn.send_with_reply_and_block(msg, 3000)?;
@@ -139,17 +140,19 @@ impl DbusBluez {
                 let intf_str: &str = intf_tmp.inner().unwrap();
                 if intf_str == "org.bluez.Device1" {
                     let path_str: &str = path.inner().unwrap();
-                    println!("{:?}", path_str);
+                    devices.push(path_str.to_string());
                 }
             }
         }
-        Ok(Vec::new())
+        Ok(devices)
     }
 
     pub fn get_devices(&self) -> Result<Vec<device::Device>, Box<error::Error>> {
-        let managed = self.get_managed_devices();
-        Err(Box::new(io::Error::new(
-                    io::ErrorKind::Other, "Not implemented yet!")))
+        let devices = self.get_managed_devices();
+        for d in devices {
+            println!("{:?}", d);
+        }
+        Ok(Vec::new())
     }
 
 }
