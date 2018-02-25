@@ -79,8 +79,13 @@ impl DbusBluez {
             Box::new(MessageItem::Variant(Box::new(MessageItem::Array(uuid_arr)))),
             );
 
+        let transport_entry = MessageItem::DictEntry(
+            Box::new(MessageItem::Str(String::from("Transport"))),
+            Box::new(MessageItem::Variant(Box::new(MessageItem::Str(String::from("le"))))),
+            );
+
         let dict_sign = Signature::new("a{sv}")?;
-        let dict_arr = match MessageItemArray::new(vec!(uuid_entry), dict_sign) {
+        let dict_arr = match MessageItemArray::new(vec!(uuid_entry, transport_entry), dict_sign) {
             Ok(a) => a,
             Err(e) => match e {
                 _ => return Err(Box::new(io::Error::new(
