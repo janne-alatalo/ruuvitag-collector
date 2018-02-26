@@ -170,12 +170,17 @@ impl DbusBluez {
             let id: u16 = mi_id.inner().unwrap();
             debug!("manufacturer id: {}, value: ", id);
             match *mi_data {
-                MessageItem::Array(ref a) => {
-                    let arr: &[MessageItem] = a;
-                    for d in arr {
-                        let byte: u8 = d.inner().unwrap();
-                        debug!("{}", byte);
-                    }
+                MessageItem::Variant(ref v) => {
+                    match **v {
+                        MessageItem::Array(ref a) => {
+                            let arr: &[MessageItem] = a;
+                            for d in arr {
+                                let byte: u8 = d.inner().unwrap();
+                                debug!("{}", byte);
+                            }
+                        },
+                        _ => panic!("Not what expected"),
+                    };
                 },
                 _ => panic!("Not what expected"),
             };
