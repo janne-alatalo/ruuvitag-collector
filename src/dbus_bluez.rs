@@ -1,5 +1,6 @@
 use std::io;
 use std::error;
+use std::{thread, time};
 use dbus::{
     Message, MessageItem, MessageItemArray,
     Signature, Props, Connection, BusType,
@@ -109,6 +110,8 @@ impl DbusBluez {
         let msg = Message::new_method_call(
             BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
         self.conn.send_with_reply_and_block(msg, 1000)?;
+        let sleep_time = time::Duration::from_millis(500);
+        thread::sleep(sleep_time);
         let is_discovering = match props.get("Discovering")? {
             MessageItem::Bool(b) => { b },
             _ => { panic!("Not the type that was expected!") },
