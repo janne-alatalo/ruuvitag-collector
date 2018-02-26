@@ -9,6 +9,7 @@ use device;
 
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
+static BLUEZ_INTERFACE_DEVICE1: &'static str = "org.bluez.Device1";
 static BLUEZ_OBJECT_PATH: &'static str = "/org/bluez/hci0";
 static BLUEZ_START_DISCOVERY: &'static str = "StartDiscovery";
 static BLUEZ_SET_DISCOVERY_FILTER: &'static str = "SetDiscoveryFilter";
@@ -150,10 +151,44 @@ impl DbusBluez {
         Ok(devices)
     }
 
+    fn read_manufacturer_field(&self, obj_path: &str) -> Result<Option<String>, Box<error::Error>> {
+
+        debug!("Getting manufacturer data for {}", obj_path);
+        let props = Props::new(&self.conn, BLUEZ_SERVICE, obj_path,
+                               BLUEZ_INTERFACE_DEVICE1, 500);
+        // manufacturer data
+        let prop_val = match props.get("ManufacturerData") {
+            Ok(val) => val,
+            Err(_) => {
+                info!("No manufacturer data in {}", obj_path);
+                return Ok(None);
+            },
+        };
+        let mfr_data: &[MessageItem] = prop_val.inner().unwrap();
+        for entry in mfr_data {
+            let (mi_id, mi_data) = entry.inner().unwrap();
+            let id: u16 = mi_id.inner().unwrap();
+            debug!("manufacturer id: {}, value: ", id);
+            match *mi_data {
+                MessageItem::Array(ref a) => {
+                    let arr: &[MessageItem] = a;
+                    for d in arr {
+                        let byte: u8 = d.inner().unwrap();
+                        debug!("{}", byte);
+                    }
+                },
+                _ => panic!("Not what expected"),
+            };
+
+        }
+        Ok(None)
+    }
+
     pub fn get_devices(&self) -> Result<Vec<device::Device>, Box<error::Error>> {
-        let devices = self.get_managed_devices();
+        let devices = self.get_managed_devices()?;
+        info!("Found devices {:?}", devices);
         for d in devices {
-            println!("{:?}", d);
+            self.read_manufacturer_field(&d)?;
         }
         Ok(Vec::new())
     }
