@@ -7,6 +7,8 @@ use dbus::{
 };
 use device;
 
+type BoxErr = Box<error::Error>;
+
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
 static BLUEZ_INTERFACE_DEVICE1: &'static str = "org.bluez.Device1";
@@ -20,14 +22,14 @@ pub struct DbusBluez {
 
 impl DbusBluez {
 
-    pub fn new() -> Result<DbusBluez, Box<error::Error>> {
+    pub fn new() -> Result<DbusBluez, BoxErr> {
         let bus = DbusBluez{
             conn: Connection::get_private(BusType::System)?,
         };
         Ok(bus)
     }
 
-    pub fn initialize(&self) -> Result<(), Box<error::Error>> {
+    pub fn initialize(&self) -> Result<(), BoxErr> {
 
         let props = Props::new(
             &self.conn, BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, 500);
@@ -40,7 +42,7 @@ impl DbusBluez {
 
     }
 
-    fn poweron_interface(&self, props: &Props) -> Result<(), Box<error::Error>> {
+    fn poweron_interface(&self, props: &Props) -> Result<(), BoxErr> {
 
         let mut is_powered = match props.get("Powered")? {
             MessageItem::Bool(b) => { b },
@@ -65,7 +67,7 @@ impl DbusBluez {
 
     }
 
-    fn set_discovery_filter(&self) -> Result<(), Box<error::Error>> {
+    fn set_discovery_filter(&self) -> Result<(), BoxErr> {
 
         let empty: Vec<MessageItem> = Vec::new();
         let str_arr_sign = Signature::new("a(s)")?;
@@ -106,7 +108,7 @@ impl DbusBluez {
 
     }
 
-    fn start_discovering(&self, props: &Props) -> Result<(), Box<error::Error>> {
+    fn start_discovering(&self, props: &Props) -> Result<(), BoxErr> {
 
         let msg = Message::new_method_call(
             BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
@@ -126,7 +128,7 @@ impl DbusBluez {
 
     }
 
-    pub fn get_managed_devices(&self) -> Result<Vec<String>, Box<error::Error>> {
+    pub fn get_managed_devices(&self) -> Result<Vec<String>, BoxErr> {
         let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
                                              "org.freedesktop.DBus.ObjectManager",
                                              "GetManagedObjects")?;
@@ -151,7 +153,7 @@ impl DbusBluez {
         Ok(devices)
     }
 
-    fn read_manufacturer_field(&self, obj_path: &str) -> Result<Option<String>, Box<error::Error>> {
+    fn read_manufacturer_field(&self, obj_path: &str) -> Result<Option<String>, BoxErr> {
 
         debug!("Getting manufacturer data for {}", obj_path);
         let props = Props::new(&self.conn, BLUEZ_SERVICE, obj_path,
@@ -189,7 +191,7 @@ impl DbusBluez {
         Ok(None)
     }
 
-    pub fn get_devices(&self) -> Result<Vec<device::Device>, Box<error::Error>> {
+    pub fn get_devices(&self) -> Result<Vec<device::Device>, BoxErr> {
         let devices = self.get_managed_devices()?;
         info!("Found devices {:?}", devices);
         for d in devices {
