@@ -1,6 +1,7 @@
 use std::io;
 use std::error;
 use std::{thread, time};
+use std::collections::HashMap;
 use dbus::{
     Message, MessageItem, MessageItemArray,
     Signature, Props, Connection, BusType,
@@ -8,6 +9,7 @@ use dbus::{
 use device;
 
 type BoxErr = Box<error::Error>;
+type MaybeMap = Option<HashMap<u16, Vec<u8>>>;
 
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
@@ -153,7 +155,7 @@ impl DbusBluez {
         Ok(devices)
     }
 
-    fn read_manufacturer_field(&self, obj_path: &str) -> Result<Option<String>, BoxErr> {
+    fn read_manufacturer_field(&self, obj_path: &str)-> Result<MaybeMap, BoxErr> {
 
         debug!("Getting manufacturer data for {}", obj_path);
         let props = Props::new(&self.conn, BLUEZ_SERVICE, obj_path,
@@ -167,35 +169,40 @@ impl DbusBluez {
             },
         };
         let mfr_data: &[MessageItem] = prop_val.inner().unwrap();
+        let mut mfr_data_map = HashMap::new();
         for entry in mfr_data {
             let (mi_id, mi_data) = entry.inner().unwrap();
             let id: u16 = mi_id.inner().unwrap();
-            debug!("manufacturer id: {}, value: ", id);
             match *mi_data {
                 MessageItem::Variant(ref v) => {
                     match **v {
                         MessageItem::Array(ref a) => {
+                            let mut bytearr = Vec::new();
                             let arr: &[MessageItem] = a;
                             for d in arr {
                                 let byte: u8 = d.inner().unwrap();
-                                debug!("{}", byte);
+                                bytearr.push(byte);
                             }
+                            mfr_data_map.insert(id, bytearr);
                         },
-                        _ => panic!("Not what expected"),
+                        _ => continue
                     };
                 },
                 _ => panic!("Not what expected"),
             };
 
         }
-        Ok(None)
+        Ok(Some(mfr_data_map))
     }
 
     pub fn get_devices(&self) -> Result<Vec<device::Device>, BoxErr> {
         let devices = self.get_managed_devices()?;
         info!("Found devices {:?}", devices);
         for d in devices {
-            self.read_manufacturer_field(&d)?;
+            match self.read_manufacturer_field(&d)? {
+                Some(mfr_data) => info!("object {}, manufacturer data {:?}", d, mfr_data),
+                None => {},
+            };
         }
         Ok(Vec::new())
     }
