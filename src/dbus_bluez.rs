@@ -10,11 +10,9 @@ use dbus::{
 use device;
 
 type BoxErr = Box<error::Error>;
-type MaybeMap = Option<HashMap<u16, Vec<u8>>>;
 
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
-static BLUEZ_INTERFACE_DEVICE1: &'static str = "org.bluez.Device1";
 static BLUEZ_OBJECT_PATH: &'static str = "/org/bluez/hci0";
 static BLUEZ_START_DISCOVERY: &'static str = "StartDiscovery";
 static BLUEZ_SET_DISCOVERY_FILTER: &'static str = "SetDiscoveryFilter";
@@ -230,46 +228,6 @@ impl DbusBluez {
         }
         Ok(devices)
 
-    }
-
-    fn read_manufacturer_field(&self, obj_path: &str)-> Result<MaybeMap, BoxErr> {
-
-        debug!("Getting manufacturer data for {}", obj_path);
-        let props = Props::new(&self.conn, BLUEZ_SERVICE, obj_path,
-                               BLUEZ_INTERFACE_DEVICE1, 500);
-        // manufacturer data
-        let prop_val = match props.get("ManufacturerData") {
-            Ok(val) => val,
-            Err(_) => {
-                info!("No manufacturer data in {}", obj_path);
-                return Ok(None);
-            },
-        };
-        let mfr_data: &[MessageItem] = prop_val.inner().unwrap();
-        let mut mfr_data_map = HashMap::new();
-        for entry in mfr_data {
-            let (mi_id, mi_data) = entry.inner().unwrap();
-            let id: u16 = mi_id.inner().unwrap();
-            match *mi_data {
-                MessageItem::Variant(ref v) => {
-                    match **v {
-                        MessageItem::Array(ref a) => {
-                            let mut bytearr = Vec::new();
-                            let arr: &[MessageItem] = a;
-                            for d in arr {
-                                let byte: u8 = d.inner().unwrap();
-                                bytearr.push(byte);
-                            }
-                            mfr_data_map.insert(id, bytearr);
-                        },
-                        _ => continue
-                    };
-                },
-                _ => panic!("Not what expected"),
-            };
-
-        }
-        Ok(Some(mfr_data_map))
     }
 
     pub fn get_devices(&self) -> Result<Vec<device::Device>, BoxErr> {
