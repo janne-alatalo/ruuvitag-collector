@@ -1,4 +1,3 @@
-use std::io;
 use std::io::{Error, ErrorKind};
 use std::error;
 use std::{thread, time};
@@ -61,8 +60,7 @@ impl DbusBluez {
                 _ => { panic!("Not the type that was expected!") },
             };
             if !is_powered {
-                return Err(Box::new(io::Error::new(
-                            io::ErrorKind::Other, "The bluetooth interface is not powered on!")))
+                return Err(new_err("The bluetooth interface is not powered on!"))
             } else {
                 info!("Interface on");
             }
@@ -79,8 +77,7 @@ impl DbusBluez {
         let uuid_arr = match MessageItemArray::new(empty, str_arr_sign) {
             Ok(a) => a,
             Err(e) => match e {
-                _ => return Err(Box::new(io::Error::new(
-                        io::ErrorKind::Other, "ArrayError"))),
+                _ => return Err(new_err("ArrayError")),
             },
         };
         let uuid_entry = MessageItem::DictEntry(
@@ -97,8 +94,7 @@ impl DbusBluez {
         let dict_arr = match MessageItemArray::new(vec!(uuid_entry, transport_entry), dict_sign) {
             Ok(a) => a,
             Err(e) => match e {
-                _ => return Err(Box::new(io::Error::new(
-                        io::ErrorKind::Other, "ArrayError"))),
+                _ => return Err(new_err("ArrayError")),
             },
         };
 
@@ -125,8 +121,7 @@ impl DbusBluez {
             _ => { panic!("Not the type that was expected!") },
         };
         if !is_discovering {
-            return Err(Box::new(io::Error::new(
-                        io::ErrorKind::Other, "Can't set bluetooth to discover mode")))
+            return Err(new_err("Can't set bluetooth to discover mode"))
         }
 
         Ok(())
