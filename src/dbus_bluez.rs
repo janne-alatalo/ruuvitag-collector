@@ -228,7 +228,7 @@ impl DbusBluez {
     pub fn get_devices(&self) -> Result<Vec<device::Device>, BoxErr> {
         let devices = self.get_managed_devices()?;
         for d in devices {
-            info!("{:?}", d);
+            info!("{}", d.get_status());
         }
         Ok(Vec::new())
     }
