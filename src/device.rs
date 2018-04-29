@@ -83,37 +83,37 @@ impl Device {
         }
     }
 
-    pub fn get_acceleration_x(&self) -> Option<u16> {
+    pub fn get_acceleration_x(&self) -> Option<i16> {
         match self.mfr_data {
             Some(ref mfr_data) => {
                 let acceleration_x_top = *mfr_data.get(&MFR_DATA_FIELD)?.get(6)?;
                 let acceleration_x_bottom = *mfr_data.get(&MFR_DATA_FIELD)?.get(7)?;
                 let acceleration_x = ((acceleration_x_top as u16) << 8) | acceleration_x_bottom as u16;
-                Some(acceleration_x)
+                Some(acceleration_x as i16)
             },
             None => None,
         }
     }
 
-    pub fn get_acceleration_y(&self) -> Option<u16> {
+    pub fn get_acceleration_y(&self) -> Option<i16> {
         match self.mfr_data {
             Some(ref mfr_data) => {
                 let acceleration_y_top = *mfr_data.get(&MFR_DATA_FIELD)?.get(8)?;
                 let acceleration_y_bottom = *mfr_data.get(&MFR_DATA_FIELD)?.get(9)?;
                 let acceleration_y = ((acceleration_y_top as u16) << 8) | acceleration_y_bottom as u16;
-                Some(acceleration_y)
+                Some(acceleration_y as i16)
             },
             None => None,
         }
     }
 
-    pub fn get_acceleration_z(&self) -> Option<u16> {
+    pub fn get_acceleration_z(&self) -> Option<i16> {
         match self.mfr_data {
             Some(ref mfr_data) => {
                 let acceleration_z_top = *mfr_data.get(&MFR_DATA_FIELD)?.get(10)?;
                 let acceleration_z_bottom = *mfr_data.get(&MFR_DATA_FIELD)?.get(11)?;
                 let acceleration_z = ((acceleration_z_top as u16) << 8) | acceleration_z_bottom as u16;
-                Some(acceleration_z)
+                Some(acceleration_z as i16)
             },
             None => None,
         }
