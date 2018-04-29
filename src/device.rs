@@ -50,8 +50,12 @@ impl Device {
     pub fn get_temp_wholes(&self) -> Option<i8> {
         match self.mfr_data {
             Some(ref mfr_data) => {
-                let temp = *mfr_data.get(&MFR_DATA_FIELD)?.get(2)? as i8;
-                Some(temp)
+                let u8_temp = *mfr_data.get(&MFR_DATA_FIELD)?.get(2)?;
+                let i8_temp = (0x7F & u8_temp) as i8;
+                if (u8_temp & 0x80) == 0 {
+                    return Some(i8_temp)
+                }
+                Some(i8_temp * -1)
             },
             None => None,
         }
