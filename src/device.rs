@@ -140,8 +140,11 @@ impl Device {
             self.get_temp_fractions(), self.get_pressure(), self.get_acceleration_x(),
             self.get_acceleration_y(), self.get_acceleration_z(), self.get_battery()) {
 
-            format!("format {}\tbattery {}\ntemp {},{}℃\thumidity {}\tpressure {}\nacc-x {}\tacc-y {}\tacc-z {}",
-                    format, batt, temp_wholes, temp_fract, hum, press, acc_x, acc_y, acc_z)
+            let hum_perc = hum as f32 * 0.5;
+            let press_corr = 50000 + press as u32;
+
+            format!("format {}\tbattery {}\ntemp {},{}℃\thumidity {:.1}%\tpressure {} Pa\nacc-x {}\tacc-y {}\tacc-z {}",
+                    format, batt, temp_wholes, temp_fract, hum_perc, press_corr, acc_x, acc_y, acc_z)
         }
         else {
             String::from("Invalid manufacturer data")
