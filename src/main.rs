@@ -4,12 +4,17 @@ extern crate env_logger;
 extern crate dbus;
 
 mod dbus_bluez;
-mod device;
+mod bt_sensor;
+mod config;
 
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
-    let dbus = dbus_bluez::DbusBluez::new()?;
+    let conf = config::SensorConf::new();
+    let mut dbus = dbus_bluez::DbusBluez::new(conf)?;
     dbus.initialize()?;
-    dbus.get_devices()?;
+    let sensors = dbus.get_sensors()?;
+    for (_, sensor) in sensors {
+        println!("Sensor: {}, measurements {:?}", sensor.get_address(), sensor.get_measurements())
+    }
     Ok(())
 }
 

@@ -6,7 +6,9 @@ use dbus::{
     Message, MessageItem, MessageItemArray,
     Signature, Props, Connection, BusType,
 };
-use device;
+
+use bt_sensor;
+use config;
 
 type BoxErr = Box<error::Error>;
 
@@ -18,6 +20,8 @@ static BLUEZ_SET_DISCOVERY_FILTER: &'static str = "SetDiscoveryFilter";
 
 pub struct DbusBluez {
     conn: Connection,
+    sensor_factory: bt_sensor::BTSensorFactory,
+    sensor_map: HashMap<String, Box<bt_sensor::BTSensor>>,
 }
 
 fn new_err(msg: &str) -> Box<Error> {
@@ -26,9 +30,11 @@ fn new_err(msg: &str) -> Box<Error> {
 
 impl DbusBluez {
 
-    pub fn new() -> Result<DbusBluez, BoxErr> {
+    pub fn new(conf: config::SensorConf) -> Result<DbusBluez, BoxErr> {
         let bus = DbusBluez{
             conn: Connection::get_private(BusType::System)?,
+            sensor_factory: bt_sensor::BTSensorFactory::new(conf),
+            sensor_map: HashMap::new(),
         };
         Ok(bus)
     }
@@ -171,12 +177,11 @@ impl DbusBluez {
 
     }
 
-    pub fn get_managed_devices(&self) -> Result<Vec<device::Device>, BoxErr> {
+    pub fn update_sensors(&mut self) -> Result<(), BoxErr> {
 
         let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
                                              "org.freedesktop.DBus.ObjectManager",
                                              "GetManagedObjects")?;
-        let mut devices: Vec<device::Device> = Vec::new();
         // Similar implementation as here:
         // https://github.com/szeged/blurz/blob/7729c462439fb692f12e385a84ab371423eb4cd6/src/bluetooth_utils.rs#L53
         let result = self.conn.send_with_reply_and_block(msg, 3000)?;
@@ -190,7 +195,9 @@ impl DbusBluez {
                 let intf_str: &str = intf_tmp.inner().unwrap();
                 if intf_str == "org.bluez.Device1" {
                     let path_str: &str = path.inner().unwrap();
-                    let mut device = device::Device::new(path_str.to_string());
+
+                    let mut address = "".to_string();
+                    let mut mfr_data  = HashMap::new();
                     let prop_arr: &[MessageItem] = prop_map.inner().unwrap();
                     for prop in prop_arr {
                         let (key, val) = match *prop {
@@ -205,32 +212,34 @@ impl DbusBluez {
                                     _ => panic!("Expected Variant"),
                                 };
                                 info!("{:?}", key_val);
-                                device.set_address(key_val.to_string());
+                                address = key_val.to_string();
                             },
                             "ManufacturerData" => {
-                                let mfr_data = match **val {
+                                mfr_data = match **val {
                                     MessageItem::Variant(ref v) => self.read_manufacturer_data(v)?,
                                     _ => panic!("Expected Variant"),
                                 };
-                                device.set_mfr_data(mfr_data);
                             },
                             _ => continue,
                         }
                     }
-                    devices.push(device);
+                    match self.sensor_factory.get_sensor(path_str.to_string(), address, mfr_data) {
+                        Some(sensor) => {
+                            self.sensor_map.insert(path_str.to_string(), sensor);
+                        },
+                        None => {},
+                    }
                 }
             }
         }
-        Ok(devices)
+
+        Ok(())
 
     }
 
-    pub fn get_devices(&self) -> Result<Vec<device::Device>, BoxErr> {
-        let devices = self.get_managed_devices()?;
-        for d in devices {
-            info!("{}", d.get_status());
-        }
-        Ok(Vec::new())
+    pub fn get_sensors(&mut self) -> Result<&HashMap<String, Box<bt_sensor::BTSensor>>, BoxErr> {
+        self.update_sensors()?;
+        Ok(&self.sensor_map)
     }
 
 }
