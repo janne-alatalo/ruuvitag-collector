@@ -1,7 +1,7 @@
 use std::io::{Error, ErrorKind};
 use std::error;
 use std::{thread, time};
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 use dbus::{
     Message, MessageItem, MessageItemArray,
     Signature, Props, Connection, BusType,
@@ -223,11 +223,26 @@ impl DbusBluez {
                             _ => continue,
                         }
                     }
-                    match self.sensor_factory.get_sensor(path_str.to_string(), address, mfr_data) {
-                        Some(sensor) => {
-                            self.sensor_map.insert(path_str.to_string(), sensor);
+                    match self.sensor_map.entry(path_str.to_string()) {
+                        Entry::Occupied(e) => {
+                            let sensor = e.into_mut();
+                            match sensor.get_discovery_mode() {
+                                bt_sensor::DiscoveryMode::Auto => {
+                                    sensor.set_mfr_data(mfr_data);
+                                },
+                                bt_sensor::DiscoveryMode::Configured(_) => {
+                                    sensor.set_mfr_data(mfr_data);
+                                },
+                            }
                         },
-                        None => {},
+                        Entry::Vacant(e) => {
+                            match self.sensor_factory.get_sensor(path_str.to_string(), address, mfr_data) {
+                                Some(sensor) => {
+                                    e.insert(sensor);
+                                },
+                                None => {},
+                            }
+                        }
                     }
                 }
             }

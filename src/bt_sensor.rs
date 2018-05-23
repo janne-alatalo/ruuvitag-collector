@@ -1,12 +1,19 @@
 use std::collections::HashMap;
-use std::error;
 
 use config;
 
-type BoxErr = Box<error::Error>;
 type SensorIFConstr = Box<Fn(String, String, HashMap<u16, Vec<u8>>) -> Box<BTSensor>>;
 
-static MFR_DATA_FIELD: u16 = 0x0499;
+
+#[derive(Debug)]
+pub enum DiscoveryMode {
+    Auto,
+    Configured(String),
+}
+
+impl Default for DiscoveryMode {
+    fn default() -> DiscoveryMode { DiscoveryMode::Auto }
+}
 
 pub trait BTSensor {
 
@@ -17,6 +24,8 @@ pub trait BTSensor {
     fn get_object_path(&self) -> &str;
 
     fn get_measurements(&self) -> Option<&HashMap<String, i32>>;
+
+    fn get_discovery_mode(&self) -> &DiscoveryMode;
 
     fn reset_last_seen(&mut self);
     fn get_last_seen(&mut self);
@@ -72,6 +81,7 @@ pub struct RuuvitagDF3 {
     address: String,
     mfr_data: HashMap<u16, Vec<u8>>,
     last_seen: i32,
+    discovery_mode: DiscoveryMode,
 }
 
 impl BTSensor for RuuvitagDF3 {
@@ -98,6 +108,10 @@ impl BTSensor for RuuvitagDF3 {
         None
     }
 
+    fn get_discovery_mode(&self) -> &DiscoveryMode {
+        &self.discovery_mode
+    }
+
     fn reset_last_seen(&mut self) {
         self.last_seen = 0;
     }
@@ -107,6 +121,8 @@ impl BTSensor for RuuvitagDF3 {
     }
 
 }
+
+static MFR_DATA_FIELD: u16 = 0x0499;
 
 impl RuuvitagDF3 {
 
