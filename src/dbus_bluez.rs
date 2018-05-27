@@ -182,6 +182,7 @@ impl DbusBluez {
         let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
                                              "org.freedesktop.DBus.ObjectManager",
                                              "GetManagedObjects")?;
+
         // Similar implementation as here:
         // https://github.com/szeged/blurz/blob/7729c462439fb692f12e385a84ab371423eb4cd6/src/bluetooth_utils.rs#L53
         let result = self.conn.send_with_reply_and_block(msg, 3000)?;
@@ -196,7 +197,7 @@ impl DbusBluez {
                 if intf_str == "org.bluez.Device1" {
                     let path_str: &str = path.inner().unwrap();
 
-                    let mut address = "".to_string();
+                    let mut address = "";
                     let mut mfr_data  = HashMap::new();
                     let prop_arr: &[MessageItem] = prop_map.inner().unwrap();
                     for prop in prop_arr {
@@ -212,7 +213,7 @@ impl DbusBluez {
                                     _ => panic!("Expected Variant"),
                                 };
                                 info!("{:?}", key_val);
-                                address = key_val.to_string();
+                                address = key_val;
                             },
                             "ManufacturerData" => {
                                 mfr_data = match **val {
@@ -223,27 +224,39 @@ impl DbusBluez {
                             _ => continue,
                         }
                     }
-                    match self.sensor_map.entry(path_str.to_string()) {
-                        Entry::Occupied(e) => {
-                            let sensor = e.into_mut();
-                            match sensor.get_discovery_mode() {
-                                bt_sensor::DiscoveryMode::Auto => {
-                                    sensor.set_mfr_data(mfr_data);
-                                },
-                                bt_sensor::DiscoveryMode::Configured(_) => {
-                                    sensor.set_mfr_data(mfr_data);
-                                },
-                            }
-                        },
-                        Entry::Vacant(e) => {
-                            match self.sensor_factory.get_sensor(path_str.to_string(), address, mfr_data) {
-                                Some(sensor) => {
-                                    e.insert(sensor);
-                                },
-                                None => {},
-                            }
-                        }
-                    }
+                    self._update_sensor(path_str, address, mfr_data)?;
+                }
+            }
+        }
+        Ok(())
+
+    }
+
+    fn _update_sensor(&mut self, object_path: &str, address: &str, mfr_data: HashMap<u16, Vec<u8>>) -> Result<(), BoxErr> {
+
+        match self.sensor_map.entry(object_path.to_string()) {
+            Entry::Occupied(e) => {
+                let sensor = e.into_mut();
+                match sensor.get_discovery_mode() {
+                    bt_sensor::DiscoveryMode::Auto => {
+                        let bt_device = sensor.get_bt_device_mut();
+                        bt_device.set_address(address.to_string());
+                        bt_device.set_mfr_data(mfr_data);
+                    },
+                    bt_sensor::DiscoveryMode::Configured(_) => {
+                        let bt_device = sensor.get_bt_device_mut();
+                        bt_device.set_address(address.to_string());
+                        bt_device.set_mfr_data(mfr_data);
+                    },
+                }
+            },
+            Entry::Vacant(e) => {
+                let dev = BTDevice::new(object_path.to_string(), address.to_string(), mfr_data);
+                match self.sensor_factory.get_sensor(dev) {
+                    Some(sensor) => {
+                        e.insert(sensor);
+                    },
+                    None => {},
                 }
             }
         }
@@ -255,6 +268,45 @@ impl DbusBluez {
     pub fn get_sensors(&mut self) -> Result<&HashMap<String, Box<bt_sensor::BTSensor>>, BoxErr> {
         self.update_sensors()?;
         Ok(&self.sensor_map)
+    }
+
+}
+
+#[derive(Default, Debug)]
+pub struct BTDevice {
+    address: String,
+    object_path: String,
+    mfr_data: HashMap<u16, Vec<u8>>,
+}
+
+impl BTDevice {
+
+    pub fn new(object_path: String, address: String, mfr_data: HashMap<u16, Vec<u8>>) -> BTDevice {
+        BTDevice{
+            address: address,
+            object_path: object_path,
+            mfr_data: mfr_data,
+        }
+    }
+
+    pub fn get_object_path(&self) -> &str {
+        &self.object_path
+    }
+
+    pub fn get_address(&self) -> &str {
+        &self.address
+    }
+
+    pub fn get_mfr_data(&self) -> &HashMap<u16, Vec<u8>> {
+        &self.mfr_data
+    }
+
+    pub fn set_address(&mut self, address: String) {
+        self.address = address;
+    }
+
+    pub fn set_mfr_data(&mut self, mfr_data: HashMap<u16, Vec<u8>>) {
+        self.mfr_data = mfr_data;
     }
 
 }
