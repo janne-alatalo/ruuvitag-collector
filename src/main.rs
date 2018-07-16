@@ -7,15 +7,20 @@ mod dbus_bluez;
 mod bt_sensor;
 mod config;
 
+use std::{thread, time};
+
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let conf = config::SensorConf::new();
     let mut dbus = dbus_bluez::DbusBluez::new(conf)?;
+    let duration = time::Duration::from_millis(500);
     dbus.initialize()?;
-    let sensors = dbus.get_sensors()?;
-    for (_, sensor) in sensors {
-        println!("Sensor: {}, measurements {:?}", sensor.get_address(), sensor.get_measurements())
+    loop {
+        let sensors = dbus.get_sensors()?;
+        for (_, sensor) in sensors {
+            println!("Sensor: {}, measurements {:?}", sensor.get_address(), sensor.get_measurements())
+        }
+        thread::sleep(duration);
     }
-    Ok(())
 }
 
 fn main() {
