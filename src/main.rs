@@ -19,9 +19,9 @@ const USAGE: &'static str = "
 Naval Fate.
 
 Usage:
-  data-fetcher (-h | --help)
-  data-fetcher --version
-  data-fetcher [options]
+  bt-sensor (-h | --help)
+  bt-sensor --version
+  bt-sensor [options]
 
 Options:
   -h --help                  Show this screen.
