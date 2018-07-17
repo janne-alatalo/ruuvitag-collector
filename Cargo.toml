@@ -1,5 +1,5 @@
 [package]
-name = "dbus-test"
+name = "bt-sensor"
 version = "0.1.0"
 authors = ["Janne Alatalo <alatalo.janne@gmail.com>"]
 
