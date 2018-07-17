@@ -20,7 +20,7 @@ pub trait BTSensor {
 
     fn is_valid_data(&self, device: &BTDevice) -> bool;
 
-    fn get_measurements(&self) -> Option<&HashMap<String, i32>>;
+    fn get_measurements(&self) -> Option<HashMap<String, i32>>;
     fn get_discovery_mode(&self) -> &DiscoveryMode;
 
     fn get_bt_device(&self) -> &BTDevice;
@@ -89,8 +89,8 @@ impl BTSensor for RuuvitagDF3 {
         RuuvitagDF3::_is_valid_mfr_data(device)
     }
 
-    fn get_measurements(&self) -> Option<&HashMap<String, i32>> {
-        None
+    fn get_measurements(&self) -> Option<HashMap<String, i32>> {
+        self._get_measurements()
     }
 
     fn get_discovery_mode(&self) -> &DiscoveryMode {
@@ -231,6 +231,35 @@ impl RuuvitagDF3 {
             String::from("Invalid manufacturer data")
         }
 
+    }
+
+    fn _get_measurements(&self) -> Option<HashMap<String, i32>> {
+
+        if let (
+            Some(format), Some(hum), Some(temp_wholes),
+            Some(temp_fract), Some(press), Some(acc_x),
+            Some(acc_y), Some(acc_z), Some(batt)) = (
+            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(),
+            self.get_temp_fractions(), self.get_pressure(), self.get_acceleration_x(),
+            self.get_acceleration_y(), self.get_acceleration_z(), self.get_battery()) {
+
+            let press_corr = 50000 + press as u32;
+
+            let mut map = HashMap::new();
+            map.insert("format".to_string(), format as i32);
+            map.insert("battery".to_string(), batt as i32);
+            map.insert("temp".to_string(), temp_wholes as i32);
+            map.insert("temp_fractions".to_string(), temp_fract as i32);
+            map.insert("humidity".to_string(), hum as i32);
+            map.insert("pressure".to_string(), press_corr as i32);
+            map.insert("acc_x".to_string(), acc_x as i32);
+            map.insert("acc_y".to_string(), acc_y as i32);
+            map.insert("acc_z".to_string(), acc_z as i32);
+            Some(map)
+
+        } else {
+            None
+        }
     }
 
 }
