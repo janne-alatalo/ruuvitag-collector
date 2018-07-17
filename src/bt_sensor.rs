@@ -42,7 +42,9 @@ pub struct BTSensorFactory {
 impl BTSensorFactory {
 
     pub fn new(conf: config::SensorConf) -> BTSensorFactory {
-        BTSensorFactory{conf, ..Default::default()}
+        let mut factory = BTSensorFactory{conf, ..Default::default()};
+        factory.initialize();
+        factory
     }
 
     pub fn initialize(&mut self) {
