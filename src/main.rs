@@ -27,11 +27,13 @@ Options:
   -h --help                  Show this screen.
   --version                  Show version.
   --devicemap=<conf>         Device address to device type map file.
+  --btdevice=<device>        Bluetooth device name [default: hci0].
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Args {
     flag_devicemap: Option<String>,
+    flag_btdevice: String,
 }
 
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
@@ -43,7 +45,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
         })
         .unwrap_or_else(|e| e.exit());
     let conf = config::SensorConf::new(args.flag_devicemap);
-    let mut dbus = dbus_bluez::DbusBluez::new(conf)?;
+    let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
     let duration = time::Duration::from_millis(500);
     dbus.initialize()?;
     loop {

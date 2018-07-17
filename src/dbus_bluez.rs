@@ -14,7 +14,6 @@ type BoxErr = Box<error::Error>;
 
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
-static BLUEZ_OBJECT_PATH: &'static str = "/org/bluez/hci0";
 static BLUEZ_START_DISCOVERY: &'static str = "StartDiscovery";
 static BLUEZ_SET_DISCOVERY_FILTER: &'static str = "SetDiscoveryFilter";
 
@@ -22,6 +21,7 @@ pub struct DbusBluez {
     conn: Connection,
     sensor_factory: bt_sensor::BTSensorFactory,
     sensor_map: HashMap<String, Box<bt_sensor::BTSensor>>,
+    bluez_obj_path: String,
 }
 
 fn new_err(msg: &str) -> Box<Error> {
@@ -30,11 +30,13 @@ fn new_err(msg: &str) -> Box<Error> {
 
 impl DbusBluez {
 
-    pub fn new(conf: config::SensorConf) -> Result<DbusBluez, BoxErr> {
+    pub fn new(conf: config::SensorConf, bt_devname: String) -> Result<DbusBluez, BoxErr> {
+        let bluez_obj_path = format!("/org/bluez/{}", bt_devname);
         let bus = DbusBluez{
             conn: Connection::get_private(BusType::System)?,
             sensor_factory: bt_sensor::BTSensorFactory::new(conf),
             sensor_map: HashMap::new(),
+            bluez_obj_path: bluez_obj_path,
         };
         Ok(bus)
     }
@@ -42,7 +44,12 @@ impl DbusBluez {
     pub fn initialize(&self) -> Result<(), BoxErr> {
 
         let props = Props::new(
-            &self.conn, BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, 500);
+            &self.conn,
+            BLUEZ_SERVICE,
+            &self.bluez_obj_path,
+            BLUEZ_INTERFACE_ADAPTER1,
+            500,
+        );
         self.poweron_interface(&props)?;
         self.set_discovery_filter()?;
         self.start_discovering(&props)?;
@@ -107,7 +114,7 @@ impl DbusBluez {
         let param = MessageItem::Array(dict_arr);
 
         let msg1 = Message::new_method_call(
-            BLUEZ_SERVICE, BLUEZ_OBJECT_PATH,
+            BLUEZ_SERVICE, &self.bluez_obj_path,
             BLUEZ_INTERFACE_ADAPTER1, BLUEZ_SET_DISCOVERY_FILTER)?.append1(param);
         self.conn.send_with_reply_and_block(msg1, 1000)?;
 
@@ -118,7 +125,7 @@ impl DbusBluez {
     fn start_discovering(&self, props: &Props) -> Result<(), BoxErr> {
 
         let msg = Message::new_method_call(
-            BLUEZ_SERVICE, BLUEZ_OBJECT_PATH, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
+            BLUEZ_SERVICE, &self.bluez_obj_path, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
         self.conn.send_with_reply_and_block(msg, 1000)?;
         let sleep_time = time::Duration::from_millis(500);
         thread::sleep(sleep_time);
