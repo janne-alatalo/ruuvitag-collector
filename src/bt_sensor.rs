@@ -58,9 +58,7 @@ impl BTSensorFactory {
 
     pub fn get_sensor(&self, bt_device: BTDevice) -> Option<Box<BTSensor>> {
         match self.conf.get_sensor_if(bt_device.get_address()) {
-            Some(sensor_if) => {
-                return self.get_sensor_type(sensor_if, bt_device);
-            },
+            Some(sensor_if) => self.get_sensor_type(sensor_if, bt_device),
             None => None,
         }
     }
