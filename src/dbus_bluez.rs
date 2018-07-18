@@ -263,8 +263,8 @@ impl DbusBluez {
                 let tag = self.conf.get_sensor_tag(address).unwrap_or(address);
                 let dev = BTDevice::new(
                     object_path.to_string(),
-                    tag.to_string(),
                     address.to_string(),
+                    tag.to_string(),
                     mfr_data,
                 );
                 match self.sensor_factory.get_sensor(dev) {
