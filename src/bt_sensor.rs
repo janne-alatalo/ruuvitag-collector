@@ -36,7 +36,6 @@ pub trait BTSensor {
 
 }
 
-#[derive(Default)]
 pub struct BTSensorFactory {
     conf: config::SensorConf,
     sensor_constructors: HashMap<&'static str, SensorIFConstr>,
@@ -45,7 +44,10 @@ pub struct BTSensorFactory {
 impl BTSensorFactory {
 
     pub fn new(conf: config::SensorConf) -> BTSensorFactory {
-        let mut factory = BTSensorFactory{conf, ..Default::default()};
+        let mut factory = BTSensorFactory{
+            conf,
+            sensor_constructors: HashMap::new(),
+        };
         factory.initialize();
         factory
     }
@@ -281,6 +283,9 @@ impl RuuvitagDF3 {
 
             let press_corr = 50000 + press as u32;
 
+            let tag  = self.bt_device.get_tag().to_string();
+            let address  = self.bt_device.get_address().to_string();
+
             let meas = RuuvitagDF3Meas{
                 data_format: format,
                 battery: batt,
@@ -291,6 +296,8 @@ impl RuuvitagDF3 {
                 acceleration_x: acc_x,
                 acceleration_y: acc_y,
                 acceleration_z: acc_z,
+                address: address,
+                tag: tag,
             };
             serde_json::to_string(&meas).ok()
 
@@ -313,4 +320,6 @@ pub struct RuuvitagDF3Meas {
     acceleration_x: i16,
     acceleration_y: i16,
     acceleration_z: i16,
+    address: String,
+    tag: String,
 }

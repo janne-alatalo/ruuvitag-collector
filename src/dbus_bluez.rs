@@ -22,6 +22,7 @@ pub struct DbusBluez {
     sensor_factory: bt_sensor::BTSensorFactory,
     sensor_map: HashMap<String, Box<bt_sensor::BTSensor>>,
     bluez_obj_path: String,
+    conf: config::SensorConf,
 }
 
 fn new_err(msg: &str) -> Box<Error> {
@@ -34,9 +35,10 @@ impl DbusBluez {
         let bluez_obj_path = format!("/org/bluez/{}", bt_devname);
         let bus = DbusBluez{
             conn: Connection::get_private(BusType::System)?,
-            sensor_factory: bt_sensor::BTSensorFactory::new(conf),
+            sensor_factory: bt_sensor::BTSensorFactory::new(conf.clone()),
             sensor_map: HashMap::new(),
             bluez_obj_path: bluez_obj_path,
+            conf: conf,
         };
         Ok(bus)
     }
@@ -258,7 +260,13 @@ impl DbusBluez {
                 }
             },
             Entry::Vacant(e) => {
-                let dev = BTDevice::new(object_path.to_string(), address.to_string(), mfr_data);
+                let tag = self.conf.get_sensor_tag(address).unwrap_or(address);
+                let dev = BTDevice::new(
+                    object_path.to_string(),
+                    tag.to_string(),
+                    address.to_string(),
+                    mfr_data,
+                );
                 match self.sensor_factory.get_sensor(dev) {
                     Some(sensor) => {
                         e.insert(sensor);
@@ -282,15 +290,17 @@ impl DbusBluez {
 #[derive(Default, Debug)]
 pub struct BTDevice {
     address: String,
+    tag: String,
     object_path: String,
     mfr_data: HashMap<u16, Vec<u8>>,
 }
 
 impl BTDevice {
 
-    pub fn new(object_path: String, address: String, mfr_data: HashMap<u16, Vec<u8>>) -> BTDevice {
+    pub fn new(object_path: String, address: String, tag: String, mfr_data: HashMap<u16, Vec<u8>>) -> BTDevice {
         BTDevice{
             address: address,
+            tag: tag,
             object_path: object_path,
             mfr_data: mfr_data,
         }
@@ -314,6 +324,10 @@ impl BTDevice {
 
     pub fn set_mfr_data(&mut self, mfr_data: HashMap<u16, Vec<u8>>) {
         self.mfr_data = mfr_data;
+    }
+
+    pub fn get_tag(&self) -> &str {
+        &self.tag
     }
 
 }

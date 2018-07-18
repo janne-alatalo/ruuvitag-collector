@@ -3,22 +3,23 @@ use std::fs::File;
 
 use serde_json;
 
+#[derive(Clone)]
 pub struct SensorInfo {
-    id: String,
+    tag: String,
     address: String,
     sensor_if: String,
 }
 
 impl SensorInfo {
 
-    pub fn new(address: String, id: String, sensor_if: String) -> SensorInfo {
+    pub fn new(address: String, tag: String, sensor_if: String) -> SensorInfo {
         SensorInfo{
-            id, address, sensor_if,
+            tag, address, sensor_if,
         }
     }
 
-    pub fn get_id(&self) -> &str {
-        &self.id
+    pub fn get_tag(&self) -> &str {
+        &self.tag
     }
 
     pub fn get_address(&self) -> &str {
@@ -31,7 +32,7 @@ impl SensorInfo {
 
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SensorConf {
     auto: bool,
     address_map: HashMap<String, SensorInfo>,
@@ -64,10 +65,10 @@ impl SensorConf {
             .map(|(k, v)| {
                 let val = v.as_object().expect(&format!("Value not an object in {}", filename));
                 let address = k;
-                let id = val
-                    .get("id")
-                    .map(|id|
-                         id.as_str().expect(&format!("Id not string in {}, device {}", filename, address))
+                let tag = val
+                    .get("tag")
+                    .map(|tag|
+                         tag.as_str().expect(&format!("tag not string in {}, device {}", filename, address))
                      )
                     .unwrap_or(address);
                 let sensor_if = val
@@ -79,7 +80,7 @@ impl SensorConf {
                 (
                     k.to_string(),
                     SensorInfo::new(
-                        id.to_string(),
+                        tag.to_string(),
                         address.to_string(),
                         sensor_if.to_string(),
                     )
@@ -97,6 +98,12 @@ impl SensorConf {
         self.address_map
             .get(address)
             .map(|c| c.get_sensor_if())
+    }
+
+    pub fn get_sensor_tag(&self, address: &str) -> Option<&str> {
+        self.address_map
+            .get(address)
+            .map(|c| c.get_tag())
     }
 
 }
