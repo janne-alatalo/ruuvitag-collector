@@ -283,8 +283,8 @@ impl RuuvitagDF3 {
 
             let press_corr = 50000 + press as u32;
 
-            let tag  = self.bt_device.get_tag().to_string();
-            let address  = self.bt_device.get_address().to_string();
+            let tag = self.bt_device.get_tag().to_string();
+            let address = self.bt_device.get_address().to_string();
 
             let meas = RuuvitagDF3Meas{
                 data_format: format,
