@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use serde_json;
+
 use config;
 use dbus_bluez::{BTDevice};
 
@@ -21,6 +23,7 @@ pub trait BTSensor {
     fn is_valid_data(&self, device: &BTDevice) -> bool;
 
     fn get_measurements(&self) -> Option<HashMap<String, i32>>;
+    fn get_measurements_json_str(&self) -> Option<String>;
     fn get_discovery_mode(&self) -> &DiscoveryMode;
 
     fn get_bt_device(&self) -> &BTDevice;
@@ -91,6 +94,10 @@ impl BTSensor for RuuvitagDF3 {
 
     fn get_measurements(&self) -> Option<HashMap<String, i32>> {
         self._get_measurements()
+    }
+
+    fn get_measurements_json_str(&self) -> Option<String> {
+        self._get_measurements_json_str()
     }
 
     fn get_discovery_mode(&self) -> &DiscoveryMode {
@@ -262,4 +269,48 @@ impl RuuvitagDF3 {
         }
     }
 
+    fn _get_measurements_json_str(&self) -> Option<String> {
+
+        if let (
+            Some(format), Some(hum), Some(temp_wholes),
+            Some(temp_fract), Some(press), Some(acc_x),
+            Some(acc_y), Some(acc_z), Some(batt)) = (
+            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(),
+            self.get_temp_fractions(), self.get_pressure(), self.get_acceleration_x(),
+            self.get_acceleration_y(), self.get_acceleration_z(), self.get_battery()) {
+
+            let press_corr = 50000 + press as u32;
+
+            let meas = RuuvitagDF3Meas{
+                data_format: format,
+                battery: batt,
+                humidity: hum,
+                temperature: temp_wholes,
+                temperature_fractions: temp_fract,
+                pressure: press_corr,
+                acceleration_x: acc_x,
+                acceleration_y: acc_y,
+                acceleration_z: acc_z,
+            };
+            serde_json::to_string(&meas).ok()
+
+        } else {
+            None
+        }
+
+    }
+
+}
+
+#[derive(Default, Debug, Serialize)]
+pub struct RuuvitagDF3Meas {
+    data_format: u8,
+    battery: u16,
+    humidity: u8,
+    temperature: i8,
+    temperature_fractions: u8,
+    pressure: u32,
+    acceleration_x: i16,
+    acceleration_y: i16,
+    acceleration_z: i16,
 }

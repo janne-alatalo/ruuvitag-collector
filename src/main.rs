@@ -51,13 +51,8 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     loop {
         let sensors = dbus.get_sensors()?;
         for (_, sensor) in sensors {
-            match sensor.get_measurements() {
-                Some(m) => {
-                    match serde_json::to_string(&m) {
-                        Ok(json) => println!("{}", json),
-                        Err(e) => error!("{}", e),
-                    }
-                },
+            match sensor.get_measurements_json_str() {
+                Some(json) => println!("{}", json),
                 None => {},
             }
         }
