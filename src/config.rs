@@ -5,8 +5,8 @@ use serde_json;
 
 #[derive(Clone)]
 pub struct SensorInfo {
-    tag: String,
     address: String,
+    tag: String,
     sensor_if: String,
 }
 
@@ -14,7 +14,7 @@ impl SensorInfo {
 
     pub fn new(address: String, tag: String, sensor_if: String) -> SensorInfo {
         SensorInfo{
-            tag, address, sensor_if,
+            address, tag, sensor_if,
         }
     }
 
@@ -80,8 +80,8 @@ impl SensorConf {
                 (
                     k.to_string(),
                     SensorInfo::new(
-                        tag.to_string(),
                         address.to_string(),
+                        tag.to_string(),
                         sensor_if.to_string(),
                     )
                 )
