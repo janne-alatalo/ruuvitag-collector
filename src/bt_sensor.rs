@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde_json;
 
 use config;
-use dbus_bluez::{BTDevice};
+use bt_device::BTDevice;
 
 type SensorIFConstr = Box<Fn(BTDevice) -> Box<BTSensor>>;
 

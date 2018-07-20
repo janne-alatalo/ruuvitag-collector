@@ -8,6 +8,7 @@ extern crate serde_json;
 extern crate docopt;
 
 mod dbus_bluez;
+mod bt_device;
 mod bt_sensor;
 mod config;
 
