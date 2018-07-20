@@ -7,7 +7,8 @@ use dbus::{
     Signature, Props, Connection, BusType,
 };
 
-use bt_sensor;
+use bt_sensor_factory::BTSensorFactory;
+use bt_sensor::{BTSensor, DiscoveryMode};
 use config;
 use bt_device::BTDevice;
 
@@ -20,8 +21,8 @@ static BLUEZ_SET_DISCOVERY_FILTER: &'static str = "SetDiscoveryFilter";
 
 pub struct DbusBluez {
     conn: Connection,
-    sensor_factory: bt_sensor::BTSensorFactory,
-    sensor_map: HashMap<String, Box<bt_sensor::BTSensor>>,
+    sensor_factory: BTSensorFactory,
+    sensor_map: HashMap<String, Box<BTSensor>>,
     bluez_obj_path: String,
     conf: config::SensorConf,
 }
@@ -36,7 +37,7 @@ impl DbusBluez {
         let bluez_obj_path = format!("/org/bluez/{}", bt_devname);
         let bus = DbusBluez{
             conn: Connection::get_private(BusType::System)?,
-            sensor_factory: bt_sensor::BTSensorFactory::new(conf.clone()),
+            sensor_factory: BTSensorFactory::new(conf.clone()),
             sensor_map: HashMap::new(),
             bluez_obj_path: bluez_obj_path,
             conf: conf,
@@ -248,12 +249,12 @@ impl DbusBluez {
             Entry::Occupied(e) => {
                 let sensor = e.into_mut();
                 match sensor.get_discovery_mode() {
-                    bt_sensor::DiscoveryMode::Auto => {
+                    DiscoveryMode::Auto => {
                         let bt_device = sensor.get_bt_device_mut();
                         bt_device.set_address(address.to_string());
                         bt_device.set_mfr_data(mfr_data);
                     },
-                    bt_sensor::DiscoveryMode::Configured(_) => {
+                    DiscoveryMode::Configured(_) => {
                         let bt_device = sensor.get_bt_device_mut();
                         bt_device.set_address(address.to_string());
                         bt_device.set_mfr_data(mfr_data);
@@ -281,7 +282,7 @@ impl DbusBluez {
 
     }
 
-    pub fn get_sensors(&mut self) -> Result<&HashMap<String, Box<bt_sensor::BTSensor>>, BoxErr> {
+    pub fn get_sensors(&mut self) -> Result<&HashMap<String, Box<BTSensor>>, BoxErr> {
         self.update_sensors()?;
         Ok(&self.sensor_map)
     }
