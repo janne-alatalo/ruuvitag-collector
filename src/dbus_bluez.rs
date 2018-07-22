@@ -209,7 +209,7 @@ impl DbusBluez {
                     let path_str: &str = path.inner().unwrap();
 
                     let mut address = "";
-                    let mut mfr_data  = HashMap::new();
+                    let mut mfr_data = None;
                     let prop_arr: &[MessageItem] = prop_map.inner().unwrap();
                     for prop in prop_arr {
                         let (key, val) = match *prop {
@@ -228,7 +228,7 @@ impl DbusBluez {
                             },
                             "ManufacturerData" => {
                                 mfr_data = match **val {
-                                    MessageItem::Variant(ref v) => self.read_manufacturer_data(v)?,
+                                    MessageItem::Variant(ref v) => Some(self.read_manufacturer_data(v)?),
                                     _ => panic!("Expected Variant"),
                                 };
                             },
@@ -243,7 +243,13 @@ impl DbusBluez {
 
     }
 
-    fn _update_sensor(&mut self, object_path: &str, address: &str, mfr_data: HashMap<u16, Vec<u8>>) -> Result<(), BoxErr> {
+    fn _update_sensor(
+        &mut self,
+        object_path: &str,
+        address: &str,
+        mfr_data: Option<HashMap<u16, Vec<u8>>>,
+        ) -> Result<(), BoxErr>
+    {
 
         match self.sensor_map.entry(object_path.to_string()) {
             Entry::Occupied(e) => {
@@ -268,6 +274,7 @@ impl DbusBluez {
                     address.to_string(),
                     tag.to_string(),
                     mfr_data,
+                    None,
                 );
                 match self.sensor_factory.get_sensor(dev) {
                     Some(sensor) => {

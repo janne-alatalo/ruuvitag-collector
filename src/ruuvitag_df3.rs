@@ -61,7 +61,7 @@ impl RuuvitagDF3 {
     }
 
     pub fn _is_valid_mfr_data(device: &BTDevice) -> bool {
-        match device.get_mfr_data().get(&MFR_DATA_FIELD) {
+        match device.get_mfr_data().and_then(|m| m.get(&MFR_DATA_FIELD)) {
             Some(data) => {
                 if data.len() == 14 {
                     return true;
@@ -87,62 +87,101 @@ impl RuuvitagDF3 {
     // See https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
     // for the specification
     pub fn get_data_format(&self) -> Option<u8> {
-        let format = self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(0)?;
-        Some(*format)
+        self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(0)
+            .map(|v| *v)
     }
 
     pub fn get_humidity(&self) -> Option<u8> {
-        let humidity = self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(1)?;
-        Some(*humidity)
+        self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(1)
+            .map(|v| *v)
     }
 
     pub fn get_temp_wholes(&self) -> Option<i8> {
-        let u8_temp = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(2)?;
-        let i8_temp = (0x7F & u8_temp) as i8;
-        if (u8_temp & 0x80) == 0 {
-            return Some(i8_temp)
-        }
-        Some(i8_temp * -1)
+        self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(2)
+            .map(|u8_temp| {
+                let i8_temp = (0x7F & u8_temp) as i8;
+                match u8_temp & 0x80 {
+                    0 => i8_temp,
+                    _ => i8_temp * -1,
+                }
+            })
     }
 
     pub fn get_temp_fractions(&self) -> Option<u8> {
-        let temp = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(3)?;
-        Some(temp)
+        self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(3)
+            .map(|v| *v)
     }
 
     pub fn get_pressure(&self) -> Option<u16> {
-        let pressure_top = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(4)?;
-        let pressure_bottom = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(5)?;
-        let pressure = ((pressure_top as u16) << 8) | pressure_bottom as u16;
-        Some(pressure)
+        let pressure_top = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(4)?;
+        let pressure_bottom = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(5)?;
+        Some(((*pressure_top as u16) << 8) | *pressure_bottom as u16)
     }
 
     pub fn get_acceleration_x(&self) -> Option<i16> {
-        let acceleration_x_top = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(6)?;
-        let acceleration_x_bottom = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(7)?;
-        let acceleration_x = ((acceleration_x_top as u16) << 8) | acceleration_x_bottom as u16;
-        Some(acceleration_x as i16)
+        let acc_x_top = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(6)?;
+        let acc_x_bottom = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(7)?;
+        Some((((*acc_x_top as u16) << 8) | *acc_x_bottom as u16) as i16)
     }
 
     pub fn get_acceleration_y(&self) -> Option<i16> {
-        let acceleration_y_top = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(8)?;
-        let acceleration_y_bottom = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(9)?;
-        let acceleration_y = ((acceleration_y_top as u16) << 8) | acceleration_y_bottom as u16;
-        Some(acceleration_y as i16)
+        let acc_y_top = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(8)?;
+        let acc_y_bottom = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(9)?;
+        Some((((*acc_y_top as u16) << 8) | *acc_y_bottom as u16) as i16)
     }
 
     pub fn get_acceleration_z(&self) -> Option<i16> {
-        let acceleration_z_top = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(10)?;
-        let acceleration_z_bottom = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(11)?;
-        let acceleration_z = ((acceleration_z_top as u16) << 8) | acceleration_z_bottom as u16;
-        Some(acceleration_z as i16)
+        let acc_z_top = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(10)?;
+        let acc_z_bottom = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(11)?;
+        Some((((*acc_z_top as u16) << 8) | *acc_z_bottom as u16) as i16)
     }
 
     pub fn get_battery(&self) -> Option<u16> {
-        let battery_top = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(10)?;
-        let battery_bottom = *self.bt_device.get_mfr_data().get(&MFR_DATA_FIELD)?.get(11)?;
-        let battery = ((battery_top as u16) << 8) | battery_bottom as u16;
-        Some(battery)
+        let batt_top = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(12)?;
+        let batt_bottom = self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(13)?;
+        Some(((*batt_top as u16) << 8) | *batt_bottom as u16)
     }
 
     pub fn get_status(&self) -> String {
