@@ -188,6 +188,49 @@ impl DbusBluez {
 
     }
 
+    fn read_service_data(&self, dbusmap: &MessageItem) -> Result<HashMap<String, Vec<u8>>, BoxErr> {
+
+        let mut map = HashMap::new();
+
+        let map_arr: &[MessageItem] = match dbusmap.inner() {
+            Ok(v) => v,
+            Err(_) => return Err(new_err("inner() is not &[MessageItem]")),
+        };
+
+        for entry in map_arr {
+            let (key_item, val_item) = match entry.inner() {
+                Ok(v) => v,
+                Err(_) => return Err(new_err("inner() is not tuple")),
+            };
+            let key: &str = match key_item.inner() {
+                Ok(v) => v,
+                Err(_) => return Err(new_err("inner() is not &str")),
+            };
+            let variant = match *val_item {
+                MessageItem::Variant(ref v) => v,
+                _ => return Err(new_err("Not a Variant")),
+            };
+            let val: &[MessageItem] = match variant.inner() {
+                Ok(r) => r,
+                Err(_) => {
+                    return Err(new_err("inner() is not &[MessageItem]"))
+                },
+            };
+            let mut byte_arr = Vec::new();
+            for entry in val {
+                let byte: u8 = match entry.inner() {
+                    Ok(v) => v,
+                    Err(_) => return Err(new_err("Not an u8")),
+                };
+                byte_arr.push(byte);
+            }
+            map.insert(key.to_string(), byte_arr);
+        }
+
+        Ok(map)
+
+    }
+
     pub fn update_sensors(&mut self) -> Result<(), BoxErr> {
 
         let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
@@ -210,6 +253,7 @@ impl DbusBluez {
 
                     let mut address = "";
                     let mut mfr_data = None;
+                    let mut svc_data = None;
                     let prop_arr: &[MessageItem] = prop_map.inner().unwrap();
                     for prop in prop_arr {
                         let (key, val) = match *prop {
@@ -232,10 +276,16 @@ impl DbusBluez {
                                     _ => panic!("Expected Variant"),
                                 };
                             },
+                            "ServiceData" => {
+                                svc_data = match **val {
+                                    MessageItem::Variant(ref v) => Some(self.read_service_data(v)?),
+                                    _ => panic!("Expected Variant"),
+                                };
+                            },
                             _ => continue,
                         }
                     }
-                    self._update_sensor(path_str, address, mfr_data)?;
+                    self._update_sensor(path_str, address, mfr_data, svc_data)?;
                 }
             }
         }
@@ -248,6 +298,7 @@ impl DbusBluez {
         object_path: &str,
         address: &str,
         mfr_data: Option<HashMap<u16, Vec<u8>>>,
+        svc_data: Option<HashMap<String, Vec<u8>>>,
         ) -> Result<(), BoxErr>
     {
 
@@ -274,7 +325,7 @@ impl DbusBluez {
                     address.to_string(),
                     tag.to_string(),
                     mfr_data,
-                    None,
+                    svc_data,
                 );
                 match self.sensor_factory.get_sensor(dev) {
                     Some(sensor) => {
