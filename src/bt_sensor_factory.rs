@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use config;
 use bt_sensor::SensorIFConstr;
 use ruuvitag_df3::RuuvitagDF3;
+use ruuvitag_df2::RuuvitagDF2;
 use bt_device::BTDevice;
 use bt_sensor::BTSensor;
 
@@ -28,6 +29,8 @@ impl BTSensorFactory {
 
     fn init_sensor_constructors(&mut self) {
         let (key, constr_func) = RuuvitagDF3::get_sensor_if_constructor();
+        self.sensor_constructors.insert(key, constr_func);
+        let (key, constr_func) = RuuvitagDF2::get_sensor_if_constructor();
         self.sensor_constructors.insert(key, constr_func);
     }
 

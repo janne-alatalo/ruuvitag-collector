@@ -9,6 +9,7 @@ extern crate docopt;
 
 mod bt_sensor_factory;
 mod ruuvitag_df3;
+mod ruuvitag_df2;
 mod dbus_bluez;
 mod bt_device;
 mod bt_sensor;
