@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde_json;
 
 use bt_sensor::{DiscoveryMode, BTSensor, SensorIFConstr};
