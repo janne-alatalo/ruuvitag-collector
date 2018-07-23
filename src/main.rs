@@ -6,6 +6,7 @@ extern crate env_logger;
 extern crate dbus;
 extern crate serde_json;
 extern crate docopt;
+extern crate base64;
 
 mod bt_sensor_factory;
 mod ruuvitag_df3;

@@ -1,4 +1,7 @@
 use serde_json;
+use std::str;
+
+use base64;
 
 use bt_sensor::{DiscoveryMode, BTSensor, SensorIFConstr};
 use bt_device::BTDevice;
@@ -80,29 +83,17 @@ impl RuuvitagDF2 {
 
     // See https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
     // for the specification
-    pub fn get_data_format(&self) -> Option<u8> {
-        self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(0)
-            .map(|v| *v)
+    pub fn get_data_format(data: &Vec<u8>) -> Option<u8> {
+        data.get(0).map(|v| *v)
     }
 
-    pub fn get_humidity(&self) -> Option<f32> {
-        let humidity = self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(1)
-            .map(|v| *v)?;
+    pub fn get_humidity(data: &Vec<u8>) -> Option<f32> {
+        let humidity = data.get(1).map(|v| *v)?;
         Some((humidity as f32) * 0.5_f32)
     }
 
-    pub fn get_temp_wholes(&self) -> Option<i8> {
-        self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(2)
-            .map(|u8_temp| {
+    pub fn get_temp_wholes(data: &Vec<u8>) -> Option<i8> {
+        data.get(2).map(|u8_temp| {
                 let i8_temp = (0x7F & u8_temp) as i8;
                 match u8_temp & 0x80 {
                     0 => i8_temp,
@@ -111,61 +102,74 @@ impl RuuvitagDF2 {
             })
     }
 
-    pub fn get_temp_fractions(&self) -> Option<u8> {
-        self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(3)
-            .map(|v| *v)
+    pub fn get_temp_fractions(data: &Vec<u8>) -> Option<u8> {
+        data.get(3).map(|v| *v)
     }
 
-    pub fn get_pressure(&self) -> Option<u16> {
-        let pressure_top = self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(4)?;
-        let pressure_bottom = self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(5)?;
+    pub fn get_pressure(data: &Vec<u8>) -> Option<u16> {
+        let pressure_top = data.get(4)?;
+        let pressure_bottom = data.get(5)?;
         Some(((*pressure_top as u16) << 8) | *pressure_bottom as u16)
     }
 
 
-    pub fn get_id(&self) -> Option<u8> {
-        self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?
-            .get(6)
-            .map(|v| *v)
+    pub fn get_id(data: &Vec<u8>) -> Option<u8> {
+        data.get(6).map(|v| *v)
     }
 
-    pub fn get_status(&self) -> String {
+    pub fn get_status(&self) -> Option<String> {
+
+        let data_vec = self.bt_device
+            .get_svc_data()?
+            .get(SVC_DATA_UUID)?;
+
+        if data_vec.len() < 4 {
+            return None
+        }
+
+        let slice = &data_vec[3..];
+        let uri = str::from_utf8(slice).ok()?;
+        let cuts = uri.split("#").collect::<Vec<&str>>();
+        let data = base64::decode(cuts.get(1)?).ok()?;
+
         if let (
             Some(format), Some(hum), Some(temp_wholes), Some(temp_fract),
             Some(press), Some(id)) = (
-            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(),
-            self.get_temp_fractions(), self.get_pressure(), self.get_id()) {
+            RuuvitagDF2::get_data_format(&data), RuuvitagDF2::get_humidity(&data), RuuvitagDF2::get_temp_wholes(&data),
+            RuuvitagDF2::get_temp_fractions(&data), RuuvitagDF2::get_pressure(&data), RuuvitagDF2::get_id(&data)) {
 
             let hum_perc = hum as f32 * 0.5;
             let press_corr = 50000 + press as u32;
 
-            format!("format {}\ntemp {},{}℃\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
-                    format, temp_wholes, temp_fract, hum_perc, press_corr, id)
+            Some(format!("format {}\ntemp {},{}℃\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
+                    format, temp_wholes, temp_fract, hum_perc, press_corr, id))
         }
         else {
-            String::from("Invalid manufacturer data")
+            None
         }
 
     }
 
     fn _get_measurements_json_str(&self) -> Option<String> {
 
+        let data_vec = self.bt_device
+            .get_svc_data()?
+            .get(SVC_DATA_UUID)?;
+
+        if data_vec.len() < 4 {
+            return None
+        }
+
+        let slice = &data_vec[3..];
+        let uri = str::from_utf8(slice).ok()?;
+        let cuts = uri.split("#").collect::<Vec<&str>>();
+        let data = base64::decode(cuts.get(1)?).ok()?;
+
         if let (
             Some(format), Some(hum), Some(temp_wholes),
             Some(temp_fract), Some(press), Some(id)) = (
-            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(),
-            self.get_temp_fractions(), self.get_pressure(), self.get_id()) {
+            RuuvitagDF2::get_data_format(&data), RuuvitagDF2::get_humidity(&data), RuuvitagDF2::get_temp_wholes(&data),
+            RuuvitagDF2::get_temp_fractions(&data), RuuvitagDF2::get_pressure(&data), RuuvitagDF2::get_id(&data)) {
 
             let press_corr = 50000 + press as u32;
 
