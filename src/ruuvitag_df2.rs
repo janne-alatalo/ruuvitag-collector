@@ -163,7 +163,10 @@ impl RuuvitagDF2 {
         let slice = &data_vec[3..];
         let uri = str::from_utf8(slice).ok()?;
         let cuts = uri.split("#").collect::<Vec<&str>>();
-        let data = base64::decode(cuts.get(1)?).ok()?;
+        // Not really sure about this... apparently the string is too short and the base64 package
+        // cant decode it. I am pretty sure this fixes it.
+        let fixed_len = format!("{}A", cuts.get(1)?);
+        let data = base64::decode_config(&fixed_len, base64::STANDARD_NO_PAD).ok()?;
 
         if let (
             Some(format), Some(hum), Some(temp_wholes),
