@@ -37,7 +37,19 @@ impl BTSensorFactory {
     pub fn get_sensor(&self, bt_device: BTDevice) -> Option<Box<BTSensor>> {
         match self.conf.get_sensor_if(bt_device.get_address()) {
             Some(sensor_if) => self.get_sensor_type(sensor_if, bt_device),
-            None => None,
+            None => {
+                if self.conf.is_auto() {
+                    for (_, v) in &self.sensor_constructors {
+                        match v.is_valid_data(&bt_device) {
+                            true => {
+                                return Some(v.construct(bt_device))
+                            },
+                            false => {}
+                        }
+                    }
+                }
+                None
+            },
         }
     }
 
