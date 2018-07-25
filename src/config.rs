@@ -49,7 +49,7 @@ impl SensorConf {
             None => HashMap::new(),
         };
         SensorConf{
-            auto: true,
+            auto: args.flag_auto,
             address_map: address_map,
         }
     }

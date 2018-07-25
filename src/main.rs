@@ -33,12 +33,14 @@ Options:
   --version                  Show version.
   --devicemap=<conf>         Device address to device type map file.
   --btdevice=<device>        Bluetooth device name [default: hci0].
+  --auto=<mode>              Discovery mode [default: true].
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Args {
     flag_devicemap: Option<String>,
     flag_btdevice: String,
+    flag_auto: bool,
 }
 
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
