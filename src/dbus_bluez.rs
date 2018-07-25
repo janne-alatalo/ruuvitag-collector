@@ -310,11 +310,13 @@ impl DbusBluez {
                         let bt_device = sensor.get_bt_device_mut();
                         bt_device.set_address(address.to_string());
                         bt_device.set_mfr_data(mfr_data);
+                        bt_device.set_svc_data(svc_data);
                     },
                     DiscoveryMode::Configured(_) => {
                         let bt_device = sensor.get_bt_device_mut();
                         bt_device.set_address(address.to_string());
                         bt_device.set_mfr_data(mfr_data);
+                        bt_device.set_svc_data(svc_data);
                     },
                 }
             },
