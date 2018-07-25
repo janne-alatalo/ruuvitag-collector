@@ -77,7 +77,7 @@ impl RuuvitagDF3 {
     pub fn _is_valid_data(device: &BTDevice) -> bool {
         match device.get_mfr_data().and_then(|m| m.get(&MFR_DATA_FIELD)) {
             Some(data) => {
-                if data.len() == 14 {
+                if data.len() == 18 {
                     return true;
                 }
                 false
