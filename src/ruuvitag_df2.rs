@@ -80,7 +80,7 @@ impl RuuvitagDF2 {
     pub fn _is_valid_data(device: &BTDevice) -> bool {
         match device.get_svc_data().and_then(|m| m.get(SVC_DATA_UUID)) {
             Some(data) => {
-                if data.len() == 7 {
+                if data.len() == 20 {
                     return true;
                 }
                 false
