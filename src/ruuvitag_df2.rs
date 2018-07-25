@@ -3,8 +3,28 @@ use std::str;
 
 use base64;
 
-use bt_sensor::{DiscoveryMode, BTSensor, SensorIFConstr};
+use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor};
 use bt_device::BTDevice;
+
+pub struct RuuvitagDF2Constructor;
+
+impl RuuvitagDF2Constructor {
+    pub fn new() -> Box<RuuvitagDF2Constructor> {
+        Box::new(RuuvitagDF2Constructor{})
+    }
+}
+
+impl BTSensorConstructor for RuuvitagDF2Constructor {
+    fn get_name(&self) -> &'static str {
+        "RuuvitagDF2"
+    }
+    fn construct(&self, device: BTDevice) -> Box<BTSensor> {
+        Box::new(RuuvitagDF2::new(device))
+    }
+    fn is_valid_data(&self, device: &BTDevice) -> bool {
+        RuuvitagDF2::_is_valid_data(device)
+    }
+}
 
 #[derive(Default, Debug)]
 pub struct RuuvitagDF2 {
@@ -16,7 +36,7 @@ pub struct RuuvitagDF2 {
 impl BTSensor for RuuvitagDF2 {
 
     fn is_valid_data(&self, device: &BTDevice) -> bool {
-        RuuvitagDF2::_is_valid_mfr_data(device)
+        RuuvitagDF2::_is_valid_data(device)
     }
 
     fn get_measurements_json_str(&self) -> Option<String> {
@@ -53,11 +73,11 @@ static SVC_DATA_UUID: &'static str = "0000feaa-0000-1000-8000-00805f9b34fb";
 
 impl RuuvitagDF2 {
 
-    pub fn new() -> RuuvitagDF2 {
-        RuuvitagDF2{..Default::default()}
+    pub fn new(bt_device: BTDevice) -> RuuvitagDF2 {
+        RuuvitagDF2{bt_device: bt_device, ..Default::default()}
     }
 
-    pub fn _is_valid_mfr_data(device: &BTDevice) -> bool {
+    pub fn _is_valid_data(device: &BTDevice) -> bool {
         match device.get_svc_data().and_then(|m| m.get(SVC_DATA_UUID)) {
             Some(data) => {
                 if data.len() == 7 {
@@ -71,15 +91,6 @@ impl RuuvitagDF2 {
         }
     }
 
-
-    pub fn get_sensor_if_constructor() -> (&'static str, SensorIFConstr) {
-        (
-            "RuuvitagDF2",
-            Box::new(|bt_device|
-                 Box::new(RuuvitagDF2{bt_device: bt_device, ..Default::default()})
-                 )
-        )
-    }
 
     // See https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
     // for the specification

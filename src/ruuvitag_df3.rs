@@ -1,7 +1,27 @@
 use serde_json;
 
-use bt_sensor::{DiscoveryMode, BTSensor, SensorIFConstr};
+use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor};
 use bt_device::BTDevice;
+
+pub struct RuuvitagDF3Constructor;
+
+impl RuuvitagDF3Constructor {
+    pub fn new() -> Box<RuuvitagDF3Constructor> {
+        Box::new(RuuvitagDF3Constructor{})
+    }
+}
+
+impl BTSensorConstructor for RuuvitagDF3Constructor {
+    fn get_name(&self) -> &'static str {
+        "RuuvitagDF3"
+    }
+    fn construct(&self, device: BTDevice) -> Box<BTSensor> {
+        Box::new(RuuvitagDF3::new(device))
+    }
+    fn is_valid_data(&self, device: &BTDevice) -> bool {
+        RuuvitagDF3::_is_valid_data(device)
+    }
+}
 
 #[derive(Default, Debug)]
 pub struct RuuvitagDF3 {
@@ -13,7 +33,7 @@ pub struct RuuvitagDF3 {
 impl BTSensor for RuuvitagDF3 {
 
     fn is_valid_data(&self, device: &BTDevice) -> bool {
-        RuuvitagDF3::_is_valid_mfr_data(device)
+        RuuvitagDF3::_is_valid_data(device)
     }
 
     fn get_measurements_json_str(&self) -> Option<String> {
@@ -50,11 +70,11 @@ static MFR_DATA_FIELD: u16 = 0x0499;
 
 impl RuuvitagDF3 {
 
-    pub fn new() -> RuuvitagDF3 {
-        RuuvitagDF3{..Default::default()}
+    pub fn new(bt_device: BTDevice) -> RuuvitagDF3 {
+        RuuvitagDF3{bt_device: bt_device, ..Default::default()}
     }
 
-    pub fn _is_valid_mfr_data(device: &BTDevice) -> bool {
+    pub fn _is_valid_data(device: &BTDevice) -> bool {
         match device.get_mfr_data().and_then(|m| m.get(&MFR_DATA_FIELD)) {
             Some(data) => {
                 if data.len() == 14 {
@@ -66,16 +86,6 @@ impl RuuvitagDF3 {
                 false
             }
         }
-    }
-
-
-    pub fn get_sensor_if_constructor() -> (&'static str, SensorIFConstr) {
-        (
-            "RuuvitagDF3",
-            Box::new(|bt_device|
-                 Box::new(RuuvitagDF3{bt_device: bt_device, ..Default::default()})
-                 )
-        )
     }
 
     // See https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification

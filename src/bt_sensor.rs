@@ -1,8 +1,5 @@
 use bt_device::BTDevice;
 
-pub type SensorIFConstr = Box<Fn(BTDevice) -> Box<BTSensor>>;
-
-
 #[derive(Debug)]
 pub enum DiscoveryMode {
     Auto,
@@ -28,4 +25,10 @@ pub trait BTSensor {
 
     fn get_address(&self) -> &str;
 
+}
+
+pub trait BTSensorConstructor {
+    fn get_name(&self) -> &'static str;
+    fn construct(&self, device: BTDevice) -> Box<BTSensor>;
+    fn is_valid_data(&self, device: &BTDevice) -> bool;
 }
