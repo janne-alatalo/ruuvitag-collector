@@ -3,6 +3,8 @@ use std::fs::File;
 
 use serde_json;
 
+use ::Args;
+
 #[derive(Clone)]
 pub struct SensorInfo {
     address: String,
@@ -40,9 +42,10 @@ pub struct SensorConf {
 
 impl SensorConf {
 
-    pub fn new(devicemap_file: Option<String>) -> SensorConf {
-        let address_map = match devicemap_file {
-            Some(f) => SensorConf::parse_devicemap_file(f),
+    pub fn new(args: &Args) -> SensorConf {
+
+        let address_map = match args.flag_devicemap {
+            Some(ref f) => SensorConf::parse_devicemap_file(f),
             None => HashMap::new(),
         };
         SensorConf{
@@ -51,9 +54,9 @@ impl SensorConf {
         }
     }
 
-    fn parse_devicemap_file(filename: String) -> HashMap<String, SensorInfo> {
+    fn parse_devicemap_file(filename: &str) -> HashMap<String, SensorInfo> {
 
-        let f = File::open(&filename)
+        let f = File::open(filename)
             .expect(&format!("Cannot open file {}", filename));
         let v: serde_json::Value = serde_json::from_reader(f)
             .map_err(|e| panic!("JSON error in {}: {}", filename, e))

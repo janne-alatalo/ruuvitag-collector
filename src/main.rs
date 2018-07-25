@@ -36,7 +36,7 @@ Options:
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Args {
+pub struct Args {
     flag_devicemap: Option<String>,
     flag_btdevice: String,
 }
@@ -49,7 +49,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
                 .deserialize()
         })
         .unwrap_or_else(|e| e.exit());
-    let conf = config::SensorConf::new(args.flag_devicemap);
+    let conf = config::SensorConf::new(&args);
     let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
     let duration = time::Duration::from_millis(500);
     dbus.initialize()?;
