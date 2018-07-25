@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct BTDevice {
     address: String,
     tag: String,

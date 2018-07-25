@@ -18,8 +18,8 @@ impl BTSensorConstructor for RuuvitagDF2Constructor {
     fn get_name(&self) -> &'static str {
         "RuuvitagDF2"
     }
-    fn construct(&self, device: BTDevice) -> Box<BTSensor> {
-        Box::new(RuuvitagDF2::new(device))
+    fn construct(&self, device: BTDevice, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
+        Box::new(RuuvitagDF2::new(device, discovery_mode))
     }
     fn is_valid_data(&self, device: &BTDevice) -> bool {
         RuuvitagDF2::_is_valid_data(device)
@@ -67,14 +67,18 @@ impl BTSensor for RuuvitagDF2 {
         self.get_bt_device().get_address()
     }
 
+    fn set_device(&mut self, bt_device: BTDevice) {
+        self.bt_device = bt_device;
+    }
+
 }
 
 static SVC_DATA_UUID: &'static str = "0000feaa-0000-1000-8000-00805f9b34fb";
 
 impl RuuvitagDF2 {
 
-    pub fn new(bt_device: BTDevice) -> RuuvitagDF2 {
-        RuuvitagDF2{bt_device: bt_device, ..Default::default()}
+    pub fn new(bt_device: BTDevice, discovery_mode: DiscoveryMode) -> RuuvitagDF2 {
+        RuuvitagDF2{bt_device, discovery_mode, ..Default::default()}
     }
 
     pub fn _is_valid_data(device: &BTDevice) -> bool {

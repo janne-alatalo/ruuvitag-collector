@@ -15,8 +15,8 @@ impl BTSensorConstructor for RuuvitagDF3Constructor {
     fn get_name(&self) -> &'static str {
         "RuuvitagDF3"
     }
-    fn construct(&self, device: BTDevice) -> Box<BTSensor> {
-        Box::new(RuuvitagDF3::new(device))
+    fn construct(&self, device: BTDevice, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
+        Box::new(RuuvitagDF3::new(device, discovery_mode))
     }
     fn is_valid_data(&self, device: &BTDevice) -> bool {
         RuuvitagDF3::_is_valid_data(device)
@@ -64,14 +64,18 @@ impl BTSensor for RuuvitagDF3 {
         self.get_bt_device().get_address()
     }
 
+    fn set_device(&mut self, bt_device: BTDevice) {
+        self.bt_device = bt_device;
+    }
+
 }
 
 static MFR_DATA_FIELD: u16 = 0x0499;
 
 impl RuuvitagDF3 {
 
-    pub fn new(bt_device: BTDevice) -> RuuvitagDF3 {
-        RuuvitagDF3{bt_device: bt_device, ..Default::default()}
+    pub fn new(bt_device: BTDevice, discovery_mode: DiscoveryMode) -> RuuvitagDF3 {
+        RuuvitagDF3{bt_device, discovery_mode, ..Default::default()}
     }
 
     pub fn _is_valid_data(device: &BTDevice) -> bool {

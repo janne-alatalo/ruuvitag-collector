@@ -5,7 +5,7 @@ use bt_sensor::BTSensorConstructor;
 use ruuvitag_df3::RuuvitagDF3Constructor;
 use ruuvitag_df2::RuuvitagDF2Constructor;
 use bt_device::BTDevice;
-use bt_sensor::BTSensor;
+use bt_sensor::{BTSensor, DiscoveryMode};
 
 pub struct BTSensorFactory {
     conf: config::SensorConf,
@@ -39,14 +39,7 @@ impl BTSensorFactory {
             Some(sensor_if) => self.get_sensor_type(sensor_if, bt_device),
             None => {
                 if self.conf.is_auto() {
-                    for (_, v) in &self.sensor_constructors {
-                        match v.is_valid_data(&bt_device) {
-                            true => {
-                                return Some(v.construct(bt_device))
-                            },
-                            false => {}
-                        }
-                    }
+                    return self.autofind_sensor_type(bt_device)
                 }
                 None
             },
@@ -55,12 +48,47 @@ impl BTSensorFactory {
 
     fn get_sensor_type(&self, sensor_type: &str, bt_device: BTDevice) -> Option<Box<BTSensor>> {
         match self.sensor_constructors.get(sensor_type) {
-            Some(constructor) => Some(constructor.construct(bt_device)),
+            Some(constructor) => {
+                let name = constructor.get_name().to_string();
+                Some(constructor.construct(bt_device, DiscoveryMode::Configured(name)))
+            },
             None => None,
         }
     }
 
-    fn auto_discover(&self, object_path: String, address: String, mfr_data: HashMap<u16, Vec<u8>>) -> Option<&'static str> {
+    pub fn auto_discover(&self, mut sensor: Box<BTSensor>, device: BTDevice) -> Box<BTSensor> {
+        match sensor.is_valid_data(&device) {
+            true => {
+                sensor.set_device(device);
+                sensor
+            },
+            false => {
+                // TODO: is there any way not to pass device as value?
+                match self.autofind_sensor_type(device.clone()) {
+                    Some(sensor) => sensor,
+                    None => {
+                        sensor.set_device(device);
+                        sensor
+                    },
+                }
+            }
+        }
+    }
+
+    fn autofind_sensor_type(&self, bt_device: BTDevice) -> Option<Box<BTSensor>> {
+        for (_, v) in &self.sensor_constructors {
+            match v.is_valid_data(&bt_device) {
+                true => {
+                    return Some(
+                        v.construct(
+                            bt_device,
+                            DiscoveryMode::Auto
+                        )
+                    )
+                },
+                false => {}
+            }
+        }
         None
     }
 

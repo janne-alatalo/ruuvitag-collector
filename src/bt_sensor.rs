@@ -25,10 +25,12 @@ pub trait BTSensor {
 
     fn get_address(&self) -> &str;
 
+    fn set_device(&mut self, bt_device: BTDevice);
+
 }
 
 pub trait BTSensorConstructor {
     fn get_name(&self) -> &'static str;
-    fn construct(&self, device: BTDevice) -> Box<BTSensor>;
+    fn construct(&self, device: BTDevice, discovery_mode: DiscoveryMode) -> Box<BTSensor>;
     fn is_valid_data(&self, device: &BTDevice) -> bool;
 }
