@@ -1,6 +1,6 @@
 use bt_device::BTDevice;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DiscoveryMode {
     Auto,
     Configured(String),
