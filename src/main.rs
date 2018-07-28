@@ -34,6 +34,7 @@ Options:
   --devicemap=<conf>         Device address to device type map file.
   --btdevice=<device>        Bluetooth device name [default: hci0].
   --auto=<mode>              Discovery mode [default: true].
+  --interval=<secs>          BT device Poll interval [default: 3].
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -41,6 +42,7 @@ pub struct Args {
     flag_devicemap: Option<String>,
     flag_btdevice: String,
     flag_auto: bool,
+    flag_interval: u64,
 }
 
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
@@ -53,7 +55,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
         .unwrap_or_else(|e| e.exit());
     let conf = config::SensorConf::new(&args);
     let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
-    let duration = time::Duration::from_millis(500);
+    let duration = time::Duration::from_secs(args.flag_interval);
     dbus.initialize()?;
     loop {
         let sensors = dbus.get_sensors()?;
