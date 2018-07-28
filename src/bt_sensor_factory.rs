@@ -39,7 +39,7 @@ impl BTSensorFactory {
             Some(sensor_if) => self.get_sensor_type(sensor_if, bt_device),
             None => {
                 if self.conf.is_auto() {
-                    return self.autofind_sensor_type(bt_device)
+                    return self.autofind_sensor_type(&bt_device)
                 }
                 None
             },
@@ -56,32 +56,31 @@ impl BTSensorFactory {
         }
     }
 
-    pub fn auto_discover(&self, mut sensor: Box<BTSensor>, device: BTDevice) -> Box<BTSensor> {
+    pub fn auto_discover(&self, sensor: &mut Box<BTSensor>, device: BTDevice) -> Option<Box<BTSensor>> {
         match sensor.is_valid_data(&device) {
             true => {
                 sensor.set_device(device);
-                sensor
+                None
             },
             false => {
-                // TODO: is there any way not to pass device as value?
-                match self.autofind_sensor_type(device.clone()) {
-                    Some(sensor) => sensor,
+                match self.autofind_sensor_type(&device) {
+                    Some(sensor) => Some(sensor),
                     None => {
                         sensor.set_device(device);
-                        sensor
+                        None
                     },
                 }
             }
         }
     }
 
-    fn autofind_sensor_type(&self, bt_device: BTDevice) -> Option<Box<BTSensor>> {
+    fn autofind_sensor_type(&self, bt_device: &BTDevice) -> Option<Box<BTSensor>> {
         for (_, v) in &self.sensor_constructors {
-            match v.is_valid_data(&bt_device) {
+            match v.is_valid_data(bt_device) {
                 true => {
                     return Some(
                         v.construct(
-                            bt_device,
+                            bt_device.clone(),
                             DiscoveryMode::Auto
                         )
                     )

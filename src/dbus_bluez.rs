@@ -302,26 +302,45 @@ impl DbusBluez {
         ) -> Result<(), BoxErr>
     {
 
-        match self.sensor_map.entry(object_path.to_string()) {
-            Entry::Occupied(e) => {
-                let sensor = e.into_mut();
-                match sensor.get_discovery_mode() {
+        let tag = self.conf.get_sensor_tag(address).unwrap_or(address);
+        let swap = match self.sensor_map.entry(object_path.to_string()) {
+            Entry::Occupied(mut e) => {
+                let mut sensor = e.get_mut();
+                match sensor.get_discovery_mode().clone() {
                     DiscoveryMode::Auto => {
-                        let bt_device = sensor.get_bt_device_mut();
-                        bt_device.set_address(address.to_string());
-                        bt_device.set_mfr_data(mfr_data);
-                        bt_device.set_svc_data(svc_data);
+                        let dev = BTDevice::new(
+                            object_path.to_string(),
+                            address.to_string(),
+                            tag.to_string(),
+                            mfr_data,
+                            svc_data,
+                        );
+                        self.sensor_factory.auto_discover(sensor, dev)
                     },
-                    DiscoveryMode::Configured(_) => {
-                        let bt_device = sensor.get_bt_device_mut();
-                        bt_device.set_address(address.to_string());
-                        bt_device.set_mfr_data(mfr_data);
-                        bt_device.set_svc_data(svc_data);
+                    DiscoveryMode::Configured(sensor_type) => {
+                        match sensor_type == "auto" {
+                            true => {
+                                let dev = BTDevice::new(
+                                    object_path.to_string(),
+                                    address.to_string(),
+                                    tag.to_string(),
+                                    mfr_data,
+                                    svc_data,
+                                );
+                                self.sensor_factory.auto_discover(sensor, dev)
+                            },
+                            _ => {
+                                let bt_device = sensor.get_bt_device_mut();
+                                bt_device.set_address(address.to_string());
+                                bt_device.set_mfr_data(mfr_data);
+                                bt_device.set_svc_data(svc_data);
+                                None
+                            },
+                        }
                     },
                 }
             },
             Entry::Vacant(e) => {
-                let tag = self.conf.get_sensor_tag(address).unwrap_or(address);
                 let dev = BTDevice::new(
                     object_path.to_string(),
                     address.to_string(),
@@ -332,10 +351,15 @@ impl DbusBluez {
                 match self.sensor_factory.get_sensor(dev) {
                     Some(sensor) => {
                         e.insert(sensor);
+                        None
                     },
-                    None => {},
+                    None => None,
                 }
             }
+        };
+
+        if let Some(new_val) = swap {
+            self.sensor_map.insert(object_path.to_string(), new_val);
         }
 
         Ok(())
