@@ -1,16 +1,23 @@
-use std::io::{Error, ErrorKind};
 use std::error;
 use std::{thread, time};
 use std::collections::{HashMap, hash_map::Entry};
+
 use dbus::{
     Message, MessageItem, MessageItemArray,
     Signature, Props, Connection, BusType,
 };
 
+use  error::BlueZError;
 use bt_sensor_factory::BTSensorFactory;
 use bt_sensor::{BTSensor, DiscoveryMode};
 use config;
 use bt_device::BTDevice;
+
+macro_rules! dbus_err {
+    ($msg:expr) => {
+        Box::new(BlueZError::new(format!("{}", $msg)))
+    };
+}
 
 type BoxErr = Box<error::Error>;
 
@@ -25,10 +32,6 @@ pub struct DbusBluez {
     sensor_map: HashMap<String, Box<BTSensor>>,
     bluez_obj_path: String,
     conf: config::SensorConf,
-}
-
-fn new_err(msg: &str) -> Box<Error> {
-    return Box::new(Error::new(ErrorKind::Other, msg))
 }
 
 impl DbusBluez {
@@ -66,18 +69,18 @@ impl DbusBluez {
     fn poweron_interface(&self, props: &Props) -> Result<(), BoxErr> {
 
         let mut is_powered = match props.get("Powered")? {
-            MessageItem::Bool(b) => { b },
-            _ => { panic!("Not the type that was expected!") },
+            MessageItem::Bool(b) => b,
+            _ => panic!("Not the type that was expected!"),
         };
         if !is_powered {
             info!("Turning the bluetooth interface on...");
             props.set("Powered", MessageItem::Bool(true))?;
             is_powered = match props.get("Powered")? {
-                MessageItem::Bool(b) => { b },
-                _ => { panic!("Not the type that was expected!") },
+                MessageItem::Bool(b) => b,
+                _ => panic!("Not the type that was expected!"),
             };
             if !is_powered {
-                return Err(new_err("The bluetooth interface is not powered on!"))
+                return Err(dbus_err!("The bluetooth interface is not powered on!"))
             } else {
                 info!("Interface on");
             }
@@ -91,36 +94,35 @@ impl DbusBluez {
 
         let empty: Vec<MessageItem> = Vec::new();
         let str_arr_sign = Signature::new("a(s)")?;
-        let uuid_arr = match MessageItemArray::new(empty, str_arr_sign) {
-            Ok(a) => a,
-            Err(e) => match e {
-                _ => return Err(new_err("ArrayError")),
-            },
-        };
+        let uuid_arr = MessageItemArray::new(empty, str_arr_sign)
+            .map_err(|_| dbus_err!("ArrayError"))?;
         let uuid_entry = MessageItem::DictEntry(
             Box::new(MessageItem::Str(String::from("UUIDs"))),
             Box::new(MessageItem::Variant(Box::new(MessageItem::Array(uuid_arr)))),
-            );
+        );
 
         let transport_entry = MessageItem::DictEntry(
             Box::new(MessageItem::Str(String::from("Transport"))),
             Box::new(MessageItem::Variant(Box::new(MessageItem::Str(String::from("le"))))),
-            );
+        );
 
         let dict_sign = Signature::new("a{sv}")?;
-        let dict_arr = match MessageItemArray::new(vec!(uuid_entry, transport_entry), dict_sign) {
-            Ok(a) => a,
-            Err(e) => match e {
-                _ => return Err(new_err("ArrayError")),
-            },
-        };
+        let dict_arr = MessageItemArray::new(
+            vec!(uuid_entry, transport_entry),
+            dict_sign,
+        ).map_err(|_| dbus_err!("ArrayError"))?;
 
         let param = MessageItem::Array(dict_arr);
 
         let msg1 = Message::new_method_call(
-            BLUEZ_SERVICE, &self.bluez_obj_path,
-            BLUEZ_INTERFACE_ADAPTER1, BLUEZ_SET_DISCOVERY_FILTER)?.append1(param);
-        self.conn.send_with_reply_and_block(msg1, 1000)?;
+            BLUEZ_SERVICE,
+            &self.bluez_obj_path,
+            BLUEZ_INTERFACE_ADAPTER1,
+            BLUEZ_SET_DISCOVERY_FILTER
+        )?.append1(param);
+        self.conn
+            .send_with_reply_and_block(msg1, 1000)
+            .map_err(|_| dbus_err!("DBus Error while setting discovery filter"))?;
 
         Ok(())
 
@@ -134,11 +136,11 @@ impl DbusBluez {
         let sleep_time = time::Duration::from_millis(500);
         thread::sleep(sleep_time);
         let is_discovering = match props.get("Discovering")? {
-            MessageItem::Bool(b) => { b },
-            _ => { panic!("Not the type that was expected!") },
+            MessageItem::Bool(b) => b,
+            _ => panic!("Not the type that was expected!"),
         };
         if !is_discovering {
-            return Err(new_err("Can't set bluetooth to discover mode"))
+            return Err(dbus_err!("Can't set bluetooth to discover mode"))
         }
 
         Ok(())
@@ -149,36 +151,29 @@ impl DbusBluez {
 
         let mut map = HashMap::new();
 
-        let map_arr: &[MessageItem] = match dbusmap.inner() {
-            Ok(v) => v,
-            Err(_) => return Err(new_err("inner() is not &[MessageItem]")),
-        };
+        let map_arr: &[MessageItem] = dbusmap
+            .inner()
+            .map_err(|_| dbus_err!("inner() is not &[MessageItem]"))?;
 
         for entry in map_arr {
-            let (key_item, val_item) = match entry.inner() {
-                Ok(v) => v,
-                Err(_) => return Err(new_err("inner() is not tuple")),
-            };
-            let key: u16 = match key_item.inner() {
-                Ok(v) => v,
-                Err(_) => return Err(new_err("inner() is not u16")),
-            };
+            let (key_item, val_item) = entry
+                .inner()
+                .map_err(|_| dbus_err!("inner() is not tuple"))?;
+            let key: u16 = key_item
+                .inner()
+                .map_err(|_| dbus_err!("inner() is not u16"))?;
             let variant = match *val_item {
                 MessageItem::Variant(ref v) => v,
-                _ => return Err(new_err("Not a Variant")),
+                _ => return Err(dbus_err!("Not a Variant")),
             };
-            let val: &[MessageItem] = match variant.inner() {
-                Ok(r) => r,
-                Err(_) => {
-                    return Err(new_err("inner() is not &[MessageItem]"))
-                },
-            };
+            let val: &[MessageItem] = variant
+                .inner()
+                .map_err(|_| dbus_err!("inner() is not &[MessageItem]"))?;
             let mut byte_arr = Vec::new();
             for entry in val {
-                let byte: u8 = match entry.inner() {
-                    Ok(v) => v,
-                    Err(_) => return Err(new_err("Not an u8")),
-                };
+                let byte: u8 = entry
+                    .inner()
+                    .map_err(|_| dbus_err!("Not an u8"))?;
                 byte_arr.push(byte);
             }
             map.insert(key, byte_arr);
@@ -192,36 +187,29 @@ impl DbusBluez {
 
         let mut map = HashMap::new();
 
-        let map_arr: &[MessageItem] = match dbusmap.inner() {
-            Ok(v) => v,
-            Err(_) => return Err(new_err("inner() is not &[MessageItem]")),
-        };
+        let map_arr: &[MessageItem] = dbusmap
+            .inner()
+            .map_err(|_| dbus_err!("inner() is not &[MessageItem]"))?;
 
         for entry in map_arr {
-            let (key_item, val_item) = match entry.inner() {
-                Ok(v) => v,
-                Err(_) => return Err(new_err("inner() is not tuple")),
-            };
-            let key: &str = match key_item.inner() {
-                Ok(v) => v,
-                Err(_) => return Err(new_err("inner() is not &str")),
-            };
+            let (key_item, val_item) = entry
+                .inner()
+                .map_err(|_| dbus_err!("inner() is not tuple"))?;
+            let key: &str = key_item
+                .inner()
+                .map_err(|_| dbus_err!("inner() is not &str"))?;
             let variant = match *val_item {
                 MessageItem::Variant(ref v) => v,
-                _ => return Err(new_err("Not a Variant")),
+                _ => return Err(dbus_err!("Not a Variant")),
             };
-            let val: &[MessageItem] = match variant.inner() {
-                Ok(r) => r,
-                Err(_) => {
-                    return Err(new_err("inner() is not &[MessageItem]"))
-                },
-            };
+            let val: &[MessageItem] = variant
+                .inner()
+                .map_err(|_| dbus_err!("inner() is not &[MessageItem]"))?;
             let mut byte_arr = Vec::new();
             for entry in val {
-                let byte: u8 = match entry.inner() {
-                    Ok(v) => v,
-                    Err(_) => return Err(new_err("Not an u8")),
-                };
+                let byte: u8 = entry
+                    .inner()
+                    .map_err(|_| dbus_err!("Not an u8"))?;
                 byte_arr.push(byte);
             }
             map.insert(key.to_string(), byte_arr);
@@ -233,13 +221,18 @@ impl DbusBluez {
 
     pub fn update_sensors(&mut self) -> Result<(), BoxErr> {
 
-        let msg = Message::new_method_call(BLUEZ_SERVICE, "/",
-                                             "org.freedesktop.DBus.ObjectManager",
-                                             "GetManagedObjects")?;
+        let msg = Message::new_method_call(
+            BLUEZ_SERVICE,
+            "/",
+            "org.freedesktop.DBus.ObjectManager",
+            "GetManagedObjects",
+        )?;
 
         // Similar implementation as here:
         // https://github.com/szeged/blurz/blob/7729c462439fb692f12e385a84ab371423eb4cd6/src/bluetooth_utils.rs#L53
-        let result = self.conn.send_with_reply_and_block(msg, 3000)?;
+        let result = self.conn
+            .send_with_reply_and_block(msg, 3000)
+            .map_err(|_| dbus_err!("Failed to make dbus query".to_string()))?;
         let result_vec = result.get_items();
         let items: &[MessageItem] = result_vec.get(0).unwrap().inner().unwrap();
         for i in items {

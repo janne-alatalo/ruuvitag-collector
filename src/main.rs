@@ -1,7 +1,5 @@
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
 extern crate env_logger;
 extern crate dbus;
 extern crate serde_json;
@@ -15,6 +13,7 @@ mod dbus_bluez;
 mod bt_device;
 mod bt_sensor;
 mod config;
+mod error;
 
 use std::{thread, time};
 
