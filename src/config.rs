@@ -5,7 +5,7 @@ use serde_json;
 
 use ::Args;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SensorInfo {
     address: String,
     tag: String,
@@ -34,7 +34,7 @@ impl SensorInfo {
 
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct SensorConf {
     auto: bool,
     address_map: HashMap<String, SensorInfo>,
