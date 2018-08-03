@@ -44,13 +44,15 @@ impl SensorConf {
 
     pub fn new(args: &Args) -> SensorConf {
 
-        let address_map = match args.flag_devicemap {
+        let mut devicemap = match args.flag_devicemap {
             Some(ref f) => SensorConf::parse_devicemap_file(f),
             None => HashMap::new(),
         };
+        let arg_devicemap = SensorConf::parse_arg_devicemaps(&args.arg_device);
+        devicemap.extend(arg_devicemap);
         SensorConf{
             auto: args.flag_auto,
-            address_map: address_map,
+            address_map: devicemap,
         }
     }
 
@@ -91,6 +93,22 @@ impl SensorConf {
             })
             .collect()
 
+    }
+
+    fn parse_arg_devicemaps(dev_args: &Vec<String>) -> HashMap<String, SensorInfo> {
+        let mut map = HashMap::new();
+        for arg in dev_args {
+            let cuts = arg.split(",").collect::<Vec<&str>>();
+            let addr = match cuts.get(0) {
+                Some(a) => a.to_string(),
+                None => continue,
+            };
+            let tag = cuts.get(1).map(|t| t.to_string()).unwrap_or(addr.clone());
+            let sensor_if = cuts.get(2).map(|s| s.to_string()).unwrap_or("auto".to_string());
+            let info = SensorInfo::new(addr.clone(), tag, sensor_if);
+            map.insert(addr, info);
+        }
+        map
     }
 
     pub fn is_auto(&self) -> bool {

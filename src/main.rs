@@ -26,6 +26,7 @@ Usage:
   bt-sensor (-h | --help)
   bt-sensor --version
   bt-sensor [options]
+  bt-sensor [options] <device>...
 
 Options:
   -h --help                  Show this screen.
@@ -34,6 +35,7 @@ Options:
   --btdevice=<device>        Bluetooth device name [default: hci0].
   --auto=<mode>              Discovery mode [default: true].
   --interval=<secs>          BT device Poll interval [default: 3].
+  <device>                   Device address map (MAC,tag,type)
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -42,6 +44,7 @@ pub struct Args {
     flag_btdevice: String,
     flag_auto: bool,
     flag_interval: u64,
+    arg_device: Vec<String>,
 }
 
 fn run<'a>() -> Result<(), Box<std::error::Error>> {
