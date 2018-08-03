@@ -47,6 +47,9 @@ impl BTSensorFactory {
     }
 
     fn get_sensor_type(&self, sensor_type: &str, bt_device: BTDevice) -> Option<Box<BTSensor>> {
+        if sensor_type == "auto" {
+            return self.autofind_sensor_type(&bt_device)
+        }
         match self.sensor_constructors.get(sensor_type) {
             Some(constructor) => {
                 let name = constructor.get_name().to_string();
