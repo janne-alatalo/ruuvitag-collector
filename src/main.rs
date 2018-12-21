@@ -12,6 +12,7 @@ mod ruuvitag_df2;
 mod dbus_bluez;
 mod bt_device;
 mod bt_sensor;
+mod consumer;
 mod config;
 mod error;
 
@@ -59,11 +60,12 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
     let duration = time::Duration::from_secs(args.flag_interval);
     dbus.initialize()?;
+    let consumer = consumer::initialize_consumer("stdout")?;
     loop {
         let sensors = dbus.get_sensors()?;
         for (_, sensor) in sensors {
-            match sensor.get_measurements_json_str() {
-                Some(json) => println!("{}", json),
+            match sensor.get_measurements() {
+                Some(measurement) => consumer.consume(&measurement),
                 None => {},
             }
         }
