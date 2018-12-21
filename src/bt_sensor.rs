@@ -16,7 +16,7 @@ pub trait BTSensor {
 
     fn is_valid_data(&self, device: &BTDevice) -> bool;
 
-	fn get_measurements(&self) -> Option<HashMap<String, Value>>;
+    fn get_measurements(&self) -> Option<HashMap<String, Value>>;
     fn get_measurements_json_str(&self) -> Option<String>;
     fn get_discovery_mode(&self) -> &DiscoveryMode;
 
