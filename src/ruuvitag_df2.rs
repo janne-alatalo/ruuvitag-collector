@@ -1,9 +1,10 @@
-use serde_json;
 use std::str;
+use std::collections::HashMap;
 
 use base64;
+use serde_json;
 
-use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor};
+use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor, Value};
 use bt_device::BTDevice;
 
 pub struct RuuvitagDF2Constructor;
@@ -41,6 +42,30 @@ impl BTSensor for RuuvitagDF2 {
 
     fn get_measurements_json_str(&self) -> Option<String> {
         self._get_measurements_json_str()
+    }
+
+    fn get_measurements(&self) -> Option<HashMap<String, Value>> {
+        match self._get_measurements() {
+            Some(m) => {
+                let mut map = HashMap::<String, Value>::new();
+                map.insert(
+                    "humidity".to_string(),
+                    Value::Integer(m.humidity as i64),
+                );
+                map.insert(
+                    "temperature".to_string(),
+                    Value::Float(
+                        m.temperature as f64 + (m.temperature_fractions as f64 / 100.0)
+                    ),
+                );
+                map.insert(
+                    "pressure".to_string(),
+                    Value::Integer(m.pressure as i64),
+                );
+                Some(map)
+            },
+            None => None,
+        }
     }
 
     fn get_discovery_mode(&self) -> &DiscoveryMode {
@@ -165,8 +190,7 @@ impl RuuvitagDF2 {
 
     }
 
-    fn _get_measurements_json_str(&self) -> Option<String> {
-
+    fn _get_measurements(&self) -> Option<RuuvitagDF2Meas> {
         let data_vec = self.bt_device
             .get_svc_data()?
             .get(SVC_DATA_UUID)?;
@@ -204,12 +228,17 @@ impl RuuvitagDF2 {
                 address: address,
                 tag: tag,
             };
-            serde_json::to_string(&meas).ok()
-
+            Some(meas)
         } else {
             None
         }
+    }
 
+    fn _get_measurements_json_str(&self) -> Option<String> {
+        match self._get_measurements() {
+            Some(meas) => serde_json::to_string(&meas).ok(),
+            None => None
+        }
     }
 
 }

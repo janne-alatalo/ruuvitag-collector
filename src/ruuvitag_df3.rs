@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use serde_json;
 
-use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor};
+use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor, Value};
 use bt_device::BTDevice;
 
 pub struct RuuvitagDF3Constructor;
@@ -38,6 +40,46 @@ impl BTSensor for RuuvitagDF3 {
 
     fn get_measurements_json_str(&self) -> Option<String> {
         self._get_measurements_json_str()
+    }
+
+    fn get_measurements(&self) -> Option<HashMap<String, Value>> {
+        match self._get_measurements() {
+            Some(m) => {
+                let mut map = HashMap::<String, Value>::new();
+                map.insert(
+                    "battery".to_string(),
+                    Value::Integer(m.battery as i64),
+                );
+                map.insert(
+                    "humidity".to_string(),
+                    Value::Integer(m.humidity as i64),
+                );
+                map.insert(
+                    "temperature".to_string(),
+                    Value::Float(
+                        m.temperature as f64 + (m.temperature_fractions as f64 / 100.0)
+                    ),
+                );
+                map.insert(
+                    "pressure".to_string(),
+                    Value::Integer(m.pressure as i64),
+                );
+                map.insert(
+                    "acceleration_x".to_string(),
+                    Value::Integer(m.acceleration_x as i64),
+                );
+                map.insert(
+                    "acceleration_y".to_string(),
+                    Value::Integer(m.acceleration_y as i64),
+                );
+                map.insert(
+                    "acceleration_z".to_string(),
+                    Value::Integer(m.acceleration_z as i64),
+                );
+                Some(map)
+            },
+            None => None,
+        }
     }
 
     fn get_discovery_mode(&self) -> &DiscoveryMode {
@@ -132,6 +174,20 @@ impl RuuvitagDF3 {
             .map(|v| *v)
     }
 
+    pub fn get_temp_float(&self) -> Option<f64> {
+        if let (
+                Some(wholes),
+                Some(fractions),
+            ) = (
+                self.get_temp_wholes(),
+                self.get_temp_fractions(),
+            ) {
+            Some(wholes as f64 + (fractions as f64 / 100.0))
+        } else {
+            None
+        }
+    }
+
     pub fn get_pressure(&self) -> Option<u16> {
         let pressure_top = self.bt_device
             .get_mfr_data()?
@@ -214,7 +270,15 @@ impl RuuvitagDF3 {
     }
 
     fn _get_measurements_json_str(&self) -> Option<String> {
+        match self._get_measurements() {
+            Some(meas) => {
+                serde_json::to_string(&meas).ok()
+            },
+            None => None,
+        }
+    }
 
+    fn _get_measurements(&self) -> Option<RuuvitagDF3Meas> {
         if let (
             Some(format), Some(hum), Some(temp_wholes),
             Some(temp_fract), Some(press), Some(acc_x),
@@ -241,12 +305,10 @@ impl RuuvitagDF3 {
                 address: address,
                 tag: tag,
             };
-            serde_json::to_string(&meas).ok()
-
+            Some(meas)
         } else {
             None
         }
-
     }
 
 }
