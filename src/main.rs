@@ -5,6 +5,7 @@ extern crate dbus;
 extern crate serde_json;
 extern crate docopt;
 extern crate base64;
+extern crate influx_db_client;
 
 mod bt_sensor_factory;
 mod ruuvitag_df3;
@@ -36,6 +37,7 @@ Options:
   --btdevice=<device>        Bluetooth device name [default: hci0].
   --auto=<mode>              Discovery mode [default: true].
   --interval=<secs>          BT device Poll interval [default: 3].
+  --consumer=<type>          The consumer type [default: stdout].
   <device>                   Device address map (MAC,tag,type)
 ";
 
@@ -45,6 +47,7 @@ pub struct Args {
     flag_btdevice: String,
     flag_auto: bool,
     flag_interval: u64,
+    flag_consumer: consumer::ConsumerType,
     arg_device: Vec<String>,
 }
 
@@ -60,7 +63,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
     let duration = time::Duration::from_secs(args.flag_interval);
     dbus.initialize()?;
-    let consumer = consumer::initialize_consumer("stdout")?;
+    let consumer = consumer::initialize_consumer(&args.flag_consumer)?;
     loop {
         let sensors = dbus.get_sensors()?;
         for (_, sensor) in sensors {
