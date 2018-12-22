@@ -4,7 +4,7 @@ use std::env;
 use serde_json;
 use influx_db_client::{Client};
 
-use bt_sensor::Value;
+use bt_sensor::{Value, BTSensor};
 
 #[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 pub enum ConsumerType {
@@ -13,7 +13,7 @@ pub enum ConsumerType {
 }
 
 pub trait Consumer {
-    fn consume(&self, measurement: &HashMap<String, Value>);
+    fn consume(&self, sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>);
 }
 
 pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>, String> {
@@ -30,7 +30,7 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
 pub struct StdOutConsumer;
 
 impl Consumer for StdOutConsumer {
-    fn consume(&self, measurement: &HashMap<String, Value>) {
+    fn consume(&self, _sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>) {
         let json = serde_json::to_string(&measurement)
             .expect("Failed to serialize measurement to json");
         println!("{}", json);
@@ -55,7 +55,7 @@ impl InfluxdbConsumer {
 }
 
 impl Consumer for InfluxdbConsumer {
-    fn consume(&self, measurement: &HashMap<String, Value>) {
+    fn consume(&self, sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>) {
         let json = serde_json::to_string(&measurement)
             .expect("Failed to serialize measurement to json");
         println!("{}", json);

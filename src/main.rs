@@ -68,7 +68,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
         let sensors = dbus.get_sensors()?;
         for (_, sensor) in sensors {
             match sensor.get_measurements() {
-                Some(measurement) => consumer.consume(&measurement),
+                Some(measurement) => consumer.consume(sensor, &measurement),
                 None => {},
             }
         }
