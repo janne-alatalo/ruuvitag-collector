@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 
 use serde_json;
-use influx_db_client::{Client};
+use influx_db_client::{Client, Point, Value as InfluxVal, Precision};
 
 use bt_sensor::{Value, BTSensor};
 
@@ -21,9 +21,9 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
         ConsumerType::StdOut => {
             Ok(Box::new(StdOutConsumer{}))
         },
-        _ => {
-            Err(format!("No consumer {:?}", consumer_name))
-        }
+        ConsumerType::Influxdb => {
+            Ok(Box::new(InfluxdbConsumer::new()))
+        },
     }
 }
 
@@ -56,8 +56,33 @@ impl InfluxdbConsumer {
 
 impl Consumer for InfluxdbConsumer {
     fn consume(&self, sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>) {
-        let json = serde_json::to_string(&measurement)
-            .expect("Failed to serialize measurement to json");
-        println!("{}", json);
+        let mut point = Point::new(sensor.get_tag());
+        point.add_tag(
+            "address",
+            InfluxVal::String(sensor.get_address().to_string())
+        );
+
+        for (key, val) in measurement {
+            match val {
+                Value::String(s) => {
+                    point.add_field(key, InfluxVal::String(s.to_string()));
+                },
+                Value::Integer(i) => {
+                    point.add_field(key, InfluxVal::Integer(*i));
+                },
+                Value::Float(f) => {
+                    point.add_field(key, InfluxVal::Float(*f));
+                },
+                Value::Boolean(b) => {
+                    point.add_field(key, InfluxVal::Boolean(*b));
+                },
+            }
+        }
+        match self.client.write_point(point, Some(Precision::Milliseconds), None) {
+            Err(e) => {
+                error!("{:?}", e);
+            },
+            _ => (),
+        };
     }
 }
