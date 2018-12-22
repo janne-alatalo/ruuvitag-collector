@@ -22,7 +22,7 @@ use std::{thread, time};
 use docopt::Docopt;
 
 const USAGE: &'static str = "
-Naval Fate.
+Bluetooth Sensor Collector.
 
 Usage:
   bt-sensor (-h | --help)
