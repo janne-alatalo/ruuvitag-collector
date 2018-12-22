@@ -92,6 +92,10 @@ impl BTSensor for RuuvitagDF2 {
         self.get_bt_device().get_address()
     }
 
+    fn get_tag(&self) -> &str {
+        self.get_bt_device().get_tag()
+    }
+
     fn set_device(&mut self, bt_device: BTDevice) {
         self.bt_device = bt_device;
     }
