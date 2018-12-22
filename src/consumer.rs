@@ -49,7 +49,14 @@ impl InfluxdbConsumer {
         let influx_db = env::var_os("INFLUXDB_DB")
             .map(|s| s.to_str().expect("INFLUXDB_DB conversion error").to_string())
             .unwrap_or("ruuvitag".into());
-        let client = Client::new(influx_url, influx_db);
+        let influx_user = env::var_os("INFLUXDB_USER")
+            .map(|s| s.to_str().expect("INFLUXDB_USER conversion error").to_string())
+            .unwrap_or("ruuvitag".into());
+        let influx_password = env::var_os("INFLUXDB_PASSWORD")
+            .map(|s| s.to_str().expect("INFLUXDB_USER conversion error").to_string())
+            .unwrap_or("super_secret_ruuvitag_password".into());
+        let client = Client::new(influx_url, influx_db)
+            .set_authentication(influx_user, influx_password);
         InfluxdbConsumer{client}
     }
 }
