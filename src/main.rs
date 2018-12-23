@@ -66,12 +66,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let consumer = consumer::initialize_consumer(&args.flag_consumer)?;
     loop {
         let sensors = dbus.get_sensors()?;
-        for (_, sensor) in sensors {
-            match sensor.get_measurements() {
-                Some(measurement) => consumer.consume(sensor, &measurement),
-                None => {},
-            }
-        }
+        consumer.consume(&sensors);
         thread::sleep(duration);
     }
 }

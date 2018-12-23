@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::env;
 
-use serde_json;
-use influx_db_client::{Client, Point, Value as InfluxVal, Precision};
+use influx_db_client::{
+    Client, Point, Points, Value as InfluxVal, Precision
+};
 
 use bt_sensor::{Value, BTSensor};
 
@@ -13,7 +14,7 @@ pub enum ConsumerType {
 }
 
 pub trait Consumer {
-    fn consume(&self, sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>);
+    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>);
 }
 
 pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>, String> {
@@ -30,10 +31,13 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
 pub struct StdOutConsumer;
 
 impl Consumer for StdOutConsumer {
-    fn consume(&self, _sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>) {
-        let json = serde_json::to_string(&measurement)
-            .expect("Failed to serialize measurement to json");
-        println!("{}", json);
+    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
+        for (_, sensor) in sensors {
+            match sensor.get_measurements_json_str() {
+                Some(s) => println!("{}", s),
+                None => (),
+            }
+        }
     }
 }
 
@@ -62,30 +66,44 @@ impl InfluxdbConsumer {
 }
 
 impl Consumer for InfluxdbConsumer {
-    fn consume(&self, sensor: &Box<BTSensor>, measurement: &HashMap<String, Value>) {
-        let mut point = Point::new(sensor.get_tag());
-        point.add_tag(
-            "address",
-            InfluxVal::String(sensor.get_address().to_string())
-        );
+    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
+        let mut points_vec = Vec::<Point>::new();
+        for (_, sensor) in sensors {
+            match sensor.get_measurements() {
+                Some(measurements) => {
+                    let mut point = Point::new("ruuvitag");
+                    point.add_tag(
+                        "tag",
+                        InfluxVal::String(sensor.get_tag().to_string())
+                    );
+                    point.add_tag(
+                        "address",
+                        InfluxVal::String(sensor.get_address().to_string())
+                    );
 
-        for (key, val) in measurement {
-            match val {
-                Value::String(s) => {
-                    point.add_field(key, InfluxVal::String(s.to_string()));
+                    for (key, val) in measurements {
+                        match val {
+                            Value::String(s) => {
+                                point.add_field(key, InfluxVal::String(s.to_string()));
+                            },
+                            Value::Integer(i) => {
+                                point.add_field(key, InfluxVal::Integer(i));
+                            },
+                            Value::Float(f) => {
+                                point.add_field(key, InfluxVal::Float(f));
+                            },
+                            Value::Boolean(b) => {
+                                point.add_field(key, InfluxVal::Boolean(b));
+                            },
+                        }
+                    }
+                    points_vec.push(point);
                 },
-                Value::Integer(i) => {
-                    point.add_field(key, InfluxVal::Integer(*i));
-                },
-                Value::Float(f) => {
-                    point.add_field(key, InfluxVal::Float(*f));
-                },
-                Value::Boolean(b) => {
-                    point.add_field(key, InfluxVal::Boolean(*b));
-                },
+                None => (),
             }
         }
-        match self.client.write_point(point, Some(Precision::Milliseconds), None) {
+        let points = Points::create_new(points_vec);
+        match self.client.write_points(points, Some(Precision::Milliseconds), None) {
             Err(e) => {
                 error!("{:?}", e);
             },
