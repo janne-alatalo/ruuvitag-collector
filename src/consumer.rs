@@ -102,12 +102,15 @@ impl Consumer for InfluxdbConsumer {
                 None => (),
             }
         }
-        let points = Points::create_new(points_vec);
-        match self.client.write_points(points, Some(Precision::Milliseconds), None) {
-            Err(e) => {
-                error!("{:?}", e);
-            },
-            _ => (),
-        };
+        if points_vec.len() > 0 {
+            debug!("Writing {} points to influxdb", points_vec.len());
+            let points = Points::create_new(points_vec);
+            match self.client.write_points(points, Some(Precision::Milliseconds), None) {
+                Err(e) => {
+                    error!("{:?}", e);
+                },
+                _ => (),
+            };
+        }
     }
 }
