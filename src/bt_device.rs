@@ -7,6 +7,7 @@ pub struct BTDevice {
     object_path: String,
     mfr_data: Option<HashMap<u16, Vec<u8>>>,
     svc_data: Option<HashMap<String, Vec<u8>>>,
+    measurement_timestamp: u64,
 }
 
 impl BTDevice {
@@ -17,6 +18,7 @@ impl BTDevice {
         tag: String,
         mfr_data: Option<HashMap<u16, Vec<u8>>>,
         svc_data: Option<HashMap<String, Vec<u8>>>,
+        measurement_timestamp: u64,
         ) -> BTDevice
     {
 
@@ -26,6 +28,7 @@ impl BTDevice {
             object_path: object_path,
             mfr_data: mfr_data,
             svc_data: svc_data,
+            measurement_timestamp,
         }
 
     }
@@ -56,6 +59,14 @@ impl BTDevice {
 
     pub fn set_svc_data(&mut self, svc_data: Option<HashMap<String, Vec<u8>>>) {
         self.svc_data = svc_data;
+    }
+
+    pub fn set_measurement_timestamp(&mut self, meas_timestamp: u64) {
+        self.measurement_timestamp = meas_timestamp;
+    }
+
+    pub fn get_measurement_timestamp(&self) -> u64 {
+        self.measurement_timestamp
     }
 
     pub fn get_tag(&self) -> &str {

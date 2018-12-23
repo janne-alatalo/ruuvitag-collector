@@ -26,6 +26,7 @@ pub trait BTSensor {
     fn reset_last_seen(&mut self);
     fn get_last_seen(&mut self);
 
+    fn get_measurement_timestamp(&self) -> u64;
     fn get_address(&self) -> &str;
     fn get_tag(&self) -> &str;
 

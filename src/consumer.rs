@@ -80,6 +80,7 @@ impl Consumer for InfluxdbConsumer {
                         "address",
                         InfluxVal::String(sensor.get_address().to_string())
                     );
+                    point.add_timestamp(sensor.get_measurement_timestamp() as i64);
 
                     for (key, val) in measurements {
                         match val {

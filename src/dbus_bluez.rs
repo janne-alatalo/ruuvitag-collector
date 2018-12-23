@@ -1,5 +1,5 @@
 use std::error;
-use std::{thread, time};
+use std::{thread, time::{Duration, SystemTime}};
 use std::collections::{HashMap, hash_map::Entry};
 
 use dbus::{
@@ -133,7 +133,7 @@ impl DbusBluez {
         let msg = Message::new_method_call(
             BLUEZ_SERVICE, &self.bluez_obj_path, BLUEZ_INTERFACE_ADAPTER1, BLUEZ_START_DISCOVERY)?;
         self.conn.send_with_reply_and_block(msg, 1000)?;
-        let sleep_time = time::Duration::from_millis(500);
+        let sleep_time = Duration::from_millis(500);
         thread::sleep(sleep_time);
         let is_discovering = match props.get("Discovering")? {
             MessageItem::Bool(b) => b,
@@ -233,6 +233,10 @@ impl DbusBluez {
         let result = self.conn
             .send_with_reply_and_block(msg, 3000)
             .map_err(|_| dbus_err!("Failed to make dbus query".to_string()))?;
+        let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(t) => t,
+            Err(_) => panic!("System clock before unix epoch!"),
+        };
         let result_vec = result.get_items();
         let items: &[MessageItem] = result_vec.get(0).unwrap().inner().unwrap();
         for i in items {
@@ -278,7 +282,9 @@ impl DbusBluez {
                             _ => continue,
                         }
                     }
-                    self._update_sensor(path_str, address, mfr_data, svc_data)?;
+                    let millis = timestamp.subsec_millis() as u64;
+                    let unix_ts = timestamp.as_secs() * 1000 + millis;
+                    self._update_sensor(path_str, address, mfr_data, svc_data, unix_ts)?;
                 }
             }
         }
@@ -292,6 +298,7 @@ impl DbusBluez {
         address: &str,
         mfr_data: Option<HashMap<u16, Vec<u8>>>,
         svc_data: Option<HashMap<String, Vec<u8>>>,
+        meas_timestamp: u64,
         ) -> Result<(), BoxErr>
     {
 
@@ -307,6 +314,7 @@ impl DbusBluez {
                             tag.to_string(),
                             mfr_data,
                             svc_data,
+                            meas_timestamp,
                         );
                         self.sensor_factory.auto_discover(sensor, dev)
                     },
@@ -319,6 +327,7 @@ impl DbusBluez {
                                     tag.to_string(),
                                     mfr_data,
                                     svc_data,
+                                    meas_timestamp,
                                 );
                                 self.sensor_factory.auto_discover(sensor, dev)
                             },
@@ -327,6 +336,7 @@ impl DbusBluez {
                                 bt_device.set_address(address.to_string());
                                 bt_device.set_mfr_data(mfr_data);
                                 bt_device.set_svc_data(svc_data);
+                                bt_device.set_measurement_timestamp(meas_timestamp);
                                 None
                             },
                         }
@@ -340,6 +350,7 @@ impl DbusBluez {
                     tag.to_string(),
                     mfr_data,
                     svc_data,
+                    meas_timestamp,
                 );
                 match self.sensor_factory.get_sensor(dev) {
                     Some(sensor) => {
