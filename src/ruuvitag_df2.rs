@@ -54,9 +54,7 @@ impl BTSensor for RuuvitagDF2 {
                 );
                 map.insert(
                     "temperature".to_string(),
-                    Value::Float(
-                        m.temperature as f64 + (m.temperature_fractions as f64 / 100.0)
-                    ),
+                    Value::Float(m.get_temperature_float()),
                 );
                 map.insert(
                     "pressure".to_string(),
@@ -140,12 +138,17 @@ impl RuuvitagDF2 {
         Some((humidity as f32) * 0.5_f32)
     }
 
-    pub fn get_temp_wholes(data: &Vec<u8>) -> Option<i8> {
+    pub fn get_temp_wholes(data: &Vec<u8>) -> Option<u8> {
         data.get(2).map(|u8_temp| {
-                let i8_temp = (0x7F & u8_temp) as i8;
-                match u8_temp & 0x80 {
-                    0 => i8_temp,
-                    _ => i8_temp * -1,
+                (0x7F & u8_temp)
+            })
+    }
+
+    pub fn get_temp_sign(data: &Vec<u8>) -> Option<i8> {
+        data.get(2).map(|raw_temp| {
+                match raw_temp & 0x80 {
+                    0 => 1,
+                    _ => -1,
                 }
             })
     }
@@ -169,9 +172,8 @@ impl RuuvitagDF2 {
         self._get_measurements()
             .map(|m| {
                 format!(
-                    "temp {},{}°C\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
-                    m.temperature,
-                    m.temperature_fractions,
+                    "temp {}°C\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
+                    m.get_temperature_float(),
                     m.humidity,
                     m.pressure,
                     m.id,
@@ -197,10 +199,12 @@ impl RuuvitagDF2 {
         let data = base64::decode_config(&fixed_len, base64::STANDARD_NO_PAD).ok()?;
 
         if let (
-            Some(format), Some(hum), Some(temp_wholes),
-            Some(temp_fract), Some(press), Some(id)) = (
-            RuuvitagDF2::get_data_format(&data), RuuvitagDF2::get_humidity(&data), RuuvitagDF2::get_temp_wholes(&data),
-            RuuvitagDF2::get_temp_fractions(&data), RuuvitagDF2::get_pressure(&data), RuuvitagDF2::get_id(&data)) {
+            Some(format), Some(hum), Some(temp_wholes), Some(temp_fract), Some(temp_sign),
+            Some(press), Some(id)) = (
+            RuuvitagDF2::get_data_format(&data), RuuvitagDF2::get_humidity(&data),
+            RuuvitagDF2::get_temp_wholes(&data), RuuvitagDF2::get_temp_fractions(&data),
+            RuuvitagDF2::get_temp_sign(&data), RuuvitagDF2::get_pressure(&data),
+            RuuvitagDF2::get_id(&data)) {
 
             let press_corr = 50000 + press as u32;
 
@@ -211,6 +215,7 @@ impl RuuvitagDF2 {
                 data_format: format,
                 humidity: hum,
                 temperature: temp_wholes,
+                temperature_sign: temp_sign,
                 temperature_fractions: temp_fract,
                 pressure: press_corr,
                 id: id,
@@ -236,10 +241,17 @@ impl RuuvitagDF2 {
 pub struct RuuvitagDF2Meas {
     data_format: u8,
     humidity: f32,
-    temperature: i8,
+    temperature: u8,
+    temperature_sign: i8,
     temperature_fractions: u8,
     pressure: u32,
     id: u8,
     address: String,
     tag: String,
+}
+
+impl RuuvitagDF2Meas {
+    fn get_temperature_float(&self) -> f64 {
+        (self.temperature as f64 + (self.temperature_fractions as f64 / 100.0)) * self.temperature_sign as f64
+    }
 }
