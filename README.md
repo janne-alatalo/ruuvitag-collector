@@ -59,3 +59,62 @@ In that case, try to change the `btdevice` option. Example:
 ```
 bt-sensor --btdevice hci1
 ```
+
+# If you are using influxdb consumer
+
+## Create database and user
+
+On influxdb cli, run the following commands:
+
+```
+CREATE DATABASE ruuvitag;
+CREATE USER ruuvitag WITH PASSWORD 'some_secret_password';
+GRANT ALL ON "ruuvitag" to "ruuvitag";
+
+# If you are using grafana and have a user for grafana
+GRANT READ ON "ruuvitag" to "grafana";
+```
+
+If you want to use data downsampling and old data deletion, run the following
+commands in the influxdb cli. The following keeps the high accuracy
+measurements for two weeks, but also downsamples the measurements to 5 minute
+mean values and keeps them forever.
+
+```
+CREATE RETENTION POLICY "two_weeks" on "ruuvitag" DURATION 2w REPLICATION 1 DEFAULT;
+CREATE RETENTION POLICY "forever" on "ruuvitag" DURATION 0s REPLICATION 1;
+
+# For some reason influxdb cli does not support multiline queries. It is
+# written on one line here so that it is easy to copy
+CREATE CONTINUOUS QUERY "downsample_ruuvitag" ON "ruuvitag" BEGIN SELECT mean(*) INTO "forever"."ruuvitag" FROM "two_weeks"."ruuvitag" GROUP BY time(5m),"tag" END
+```
+
+If you want to enable the collector as a service with systemd, copy the
+`ruuvitag-collector.service` file from this repository to
+`/etc/systemd/system`. Then create a devicemap file to
+`/etc/ruuvitag-collector/devicemap.json`.
+
+```
+# example of devicemap.json file
+{
+	"ED:11:48:07:0C:9A": {
+		"tag": "ruuvi1"
+	},
+	"EE:23:E4:E4:E9:9C": {
+		"tag": "ruuvi2"
+	}
+}
+```
+
+Then create `/etc/default/ruuvitag-collector`, that has the following content:
+
+```
+INFLUXDB_DB=ruuvitag
+INFLUXDB_URL=http://10.8.0.1:8086
+
+# This password is obviously the one that you set when creating the user for
+# the database
+INFLUXDB_PASSWORD=some_secret_password
+INFLUXDB_USER=ruuvitag
+RUST_LOG=warning
+```
