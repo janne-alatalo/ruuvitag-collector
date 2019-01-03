@@ -63,7 +63,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
     let duration = time::Duration::from_secs(args.flag_interval);
     dbus.initialize()?;
-    let consumer = consumer::initialize_consumer(&args.flag_consumer)?;
+    let mut consumer = consumer::initialize_consumer(&args.flag_consumer)?;
     loop {
         let sensors = dbus.get_sensors()?;
         consumer.consume(&sensors);

@@ -15,7 +15,7 @@ pub enum ConsumerType {
 }
 
 pub trait Consumer {
-    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>);
+    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>);
 }
 
 pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>, String> {
@@ -35,7 +35,7 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
 pub struct StdOutConsumer;
 
 impl Consumer for StdOutConsumer {
-    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
+    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
         for (_, sensor) in sensors {
             match sensor.get_measurements_str() {
                 Some(s) => println!("{}", s),
@@ -48,7 +48,7 @@ impl Consumer for StdOutConsumer {
 pub struct StdOutJsonConsumer;
 
 impl Consumer for StdOutJsonConsumer {
-    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
+    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
         for (_, sensor) in sensors {
             match sensor.get_measurements_json_str() {
                 Some(s) => println!("{}", s),
@@ -83,7 +83,7 @@ impl InfluxdbConsumer {
 }
 
 impl Consumer for InfluxdbConsumer {
-    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
+    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
         let mut points_vec = Vec::<Point>::new();
         for (_, sensor) in sensors {
             match sensor.get_measurements() {
