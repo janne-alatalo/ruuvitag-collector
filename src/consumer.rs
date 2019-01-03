@@ -126,11 +126,11 @@ impl Consumer for InfluxdbConsumer {
             debug!("Writing {} points to influxdb", self.measurements.len());
             let points = Points::create_new(self.measurements.clone());
             match self.client.write_points(points, Some(Precision::Milliseconds), None) {
+                Ok(()) => {
+                    self.measurements = Vec::new();
+                },
                 Err(e) => {
                     error!("{:?}", e);
-                },
-                _ => {
-                    self.measurements = Vec::new();
                 },
             };
         }
