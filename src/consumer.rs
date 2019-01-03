@@ -60,6 +60,7 @@ impl Consumer for StdOutJsonConsumer {
 
 pub struct InfluxdbConsumer {
     client: Client,
+    measurements: Vec<Point>,
 }
 
 impl InfluxdbConsumer {
@@ -78,7 +79,7 @@ impl InfluxdbConsumer {
             .unwrap_or("super_secret_ruuvitag_password".into());
         let client = Client::new(influx_url, influx_db)
             .set_authentication(influx_user, influx_password);
-        InfluxdbConsumer{client}
+        InfluxdbConsumer{client, measurements: Vec::new()}
     }
 }
 
@@ -120,14 +121,17 @@ impl Consumer for InfluxdbConsumer {
                 None => (),
             }
         }
-        if points_vec.len() > 0 {
-            debug!("Writing {} points to influxdb", points_vec.len());
-            let points = Points::create_new(points_vec);
+        self.measurements.append(&mut points_vec);
+        if self.measurements.len() > 0 {
+            debug!("Writing {} points to influxdb", self.measurements.len());
+            let points = Points::create_new(self.measurements.clone());
             match self.client.write_points(points, Some(Precision::Milliseconds), None) {
                 Err(e) => {
                     error!("{:?}", e);
                 },
-                _ => (),
+                _ => {
+                    self.measurements = Vec::new();
+                },
             };
         }
     }
