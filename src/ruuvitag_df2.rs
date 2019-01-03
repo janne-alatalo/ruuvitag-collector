@@ -40,6 +40,10 @@ impl BTSensor for RuuvitagDF2 {
         RuuvitagDF2::_is_valid_data(device)
     }
 
+    fn get_measurements_str(&self) -> Option<String> {
+        self._get_measurements_str()
+    }
+
     fn get_measurements_json_str(&self) -> Option<String> {
         self._get_measurements_json_str()
     }
@@ -168,19 +172,6 @@ impl RuuvitagDF2 {
         data.get(6).map(|v| *v)
     }
 
-    pub fn get_status(&self) -> Option<String> {
-        self._get_measurements()
-            .map(|m| {
-                format!(
-                    "temp {}°C\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
-                    m.get_temperature_float(),
-                    m.humidity,
-                    m.pressure,
-                    m.id,
-                )
-            })
-    }
-
     fn _get_measurements(&self) -> Option<RuuvitagDF2Meas> {
         let data_vec = self.bt_device
             .get_svc_data()?
@@ -226,6 +217,19 @@ impl RuuvitagDF2 {
         } else {
             None
         }
+    }
+
+    pub fn _get_measurements_str(&self) -> Option<String> {
+        self._get_measurements()
+            .map(|m| {
+                format!(
+                    "temp {}°C\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
+                    m.get_temperature_float(),
+                    m.humidity,
+                    m.pressure,
+                    m.id,
+                )
+            })
     }
 
     fn _get_measurements_json_str(&self) -> Option<String> {

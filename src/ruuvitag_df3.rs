@@ -42,6 +42,10 @@ impl BTSensor for RuuvitagDF3 {
         self._get_measurements_json_str()
     }
 
+    fn get_measurements_str(&self) -> Option<String> {
+        self._get_measurements_str()
+    }
+
     fn get_measurements(&self) -> Option<HashMap<String, Value>> {
         match self._get_measurements() {
             Some(m) => {
@@ -253,7 +257,7 @@ impl RuuvitagDF3 {
         Some(((*batt_top as u16) << 8) | *batt_bottom as u16)
     }
 
-    pub fn get_status(&self) -> String {
+    pub fn _get_measurements_str(&self) -> Option<String> {
         self._get_measurements()
             .map(|m| {
                 format!(
@@ -267,7 +271,6 @@ impl RuuvitagDF3 {
                     m.acceleration_z,
                 )
             })
-            .unwrap_or("Invalid manufacturer data".to_string())
     }
 
     fn _get_measurements_json_str(&self) -> Option<String> {
