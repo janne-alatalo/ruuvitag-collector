@@ -54,13 +54,9 @@ impl BTSensor for RuuvitagDF3 {
                     "humidity".to_string(),
                     Value::Integer(m.humidity as i64),
                 );
-                let temp = m.temperature as f64;
-                let temp_frac = m.temperature_fractions as f64;
                 map.insert(
                     "temperature".to_string(),
-                    Value::Float(
-                        temp + (temp_frac / 100.0) * (temp / temp.abs())
-                    ),
+                    Value::Float(m.get_temperature_float()),
                 );
                 map.insert(
                     "pressure".to_string(),
@@ -162,16 +158,25 @@ impl RuuvitagDF3 {
             .map(|v| *v)
     }
 
-    pub fn get_temp_wholes(&self) -> Option<i8> {
+    pub fn get_temp_wholes(&self) -> Option<u8> {
         self.bt_device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(2)
-            .map(|u8_temp| {
-                let i8_temp = (0x7F & u8_temp) as i8;
-                match u8_temp & 0x80 {
-                    0 => i8_temp,
-                    _ => i8_temp * -1,
+            .map(|raw_temp| {
+                (0x7F & raw_temp)
+            })
+    }
+
+    pub fn get_temp_sign(&self) -> Option<i8> {
+        self.bt_device
+            .get_mfr_data()?
+            .get(&MFR_DATA_FIELD)?
+            .get(2)
+            .map(|raw_temp| {
+                match raw_temp & 0x80 {
+                    0 => 1,
+                    _ => -1,
                 }
             })
     }
@@ -290,10 +295,10 @@ impl RuuvitagDF3 {
 
     fn _get_measurements(&self) -> Option<RuuvitagDF3Meas> {
         if let (
-            Some(format), Some(hum), Some(temp_wholes),
+            Some(format), Some(hum), Some(temp_wholes), Some(temp_sign),
             Some(temp_fract), Some(press), Some(acc_x),
             Some(acc_y), Some(acc_z), Some(batt)) = (
-            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(),
+            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(), self.get_temp_sign(),
             self.get_temp_fractions(), self.get_pressure(), self.get_acceleration_x(),
             self.get_acceleration_y(), self.get_acceleration_z(), self.get_battery()) {
 
@@ -307,6 +312,7 @@ impl RuuvitagDF3 {
                 battery: batt,
                 humidity: hum,
                 temperature: temp_wholes,
+                temperature_sign: temp_sign,
                 temperature_fractions: temp_fract,
                 pressure: press_corr,
                 acceleration_x: acc_x,
@@ -328,7 +334,8 @@ pub struct RuuvitagDF3Meas {
     data_format: u8,
     battery: u16,
     humidity: u8,
-    temperature: i8,
+    temperature: u8,
+    temperature_sign: i8,
     temperature_fractions: u8,
     pressure: u32,
     acceleration_x: i16,
@@ -336,4 +343,10 @@ pub struct RuuvitagDF3Meas {
     acceleration_z: i16,
     address: String,
     tag: String,
+}
+
+impl RuuvitagDF3Meas {
+    fn get_temperature_float(&self) -> f64 {
+        (self.temperature as f64 + (self.temperature_fractions as f64 / 100.0)) * self.temperature_sign as f64
+    }
 }
