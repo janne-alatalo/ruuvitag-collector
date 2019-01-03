@@ -166,36 +166,17 @@ impl RuuvitagDF2 {
     }
 
     pub fn get_status(&self) -> Option<String> {
-
-        let data_vec = self.bt_device
-            .get_svc_data()?
-            .get(SVC_DATA_UUID)?;
-
-        if data_vec.len() < 4 {
-            return None
-        }
-
-        let slice = &data_vec[3..];
-        let uri = str::from_utf8(slice).ok()?;
-        let cuts = uri.split("#").collect::<Vec<&str>>();
-        let data = base64::decode(cuts.get(1)?).ok()?;
-
-        if let (
-            Some(format), Some(hum), Some(temp_wholes), Some(temp_fract),
-            Some(press), Some(id)) = (
-            RuuvitagDF2::get_data_format(&data), RuuvitagDF2::get_humidity(&data), RuuvitagDF2::get_temp_wholes(&data),
-            RuuvitagDF2::get_temp_fractions(&data), RuuvitagDF2::get_pressure(&data), RuuvitagDF2::get_id(&data)) {
-
-            let hum_perc = hum as f32 * 0.5;
-            let press_corr = 50000 + press as u32;
-
-            Some(format!("format {}\ntemp {},{}℃\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
-                    format, temp_wholes, temp_fract, hum_perc, press_corr, id))
-        }
-        else {
-            None
-        }
-
+        self._get_measurements()
+            .map(|m| {
+                format!(
+                    "temp {},{}°C\thumidity {:.1}%\tpressure {} Pa\nid {}\n",
+                    m.temperature,
+                    m.temperature_fractions,
+                    m.humidity,
+                    m.pressure,
+                    m.id,
+                )
+            })
     }
 
     fn _get_measurements(&self) -> Option<RuuvitagDF2Meas> {
