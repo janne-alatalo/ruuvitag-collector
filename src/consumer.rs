@@ -10,6 +10,7 @@ use bt_sensor::{Value, BTSensor};
 #[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 pub enum ConsumerType {
     StdOut,
+    StdOutJson,
     Influxdb,
 }
 
@@ -22,6 +23,9 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
         ConsumerType::StdOut => {
             Ok(Box::new(StdOutConsumer{}))
         },
+        ConsumerType::StdOutJson => {
+            Ok(Box::new(StdOutJsonConsumer{}))
+        },
         ConsumerType::Influxdb => {
             Ok(Box::new(InfluxdbConsumer::new()))
         },
@@ -31,6 +35,19 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
 pub struct StdOutConsumer;
 
 impl Consumer for StdOutConsumer {
+    fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
+        for (_, sensor) in sensors {
+            match sensor.get_measurements_str() {
+                Some(s) => println!("{}", s),
+                None => (),
+            }
+        }
+    }
+}
+
+pub struct StdOutJsonConsumer;
+
+impl Consumer for StdOutJsonConsumer {
     fn consume(&self, sensors: &HashMap<String, Box<BTSensor>>) {
         for (_, sensor) in sensors {
             match sensor.get_measurements_json_str() {
