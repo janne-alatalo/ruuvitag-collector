@@ -77,8 +77,9 @@ impl InfluxdbConsumer {
         let influx_password = env::var_os("INFLUXDB_PASSWORD")
             .map(|s| s.to_str().expect("INFLUXDB_USER conversion error").to_string())
             .unwrap_or("super_secret_ruuvitag_password".into());
-        let client = Client::new(influx_url, influx_db)
+        let mut client = Client::new(influx_url, influx_db)
             .set_authentication(influx_user, influx_password);
+        client.set_write_timeout(3);
         InfluxdbConsumer{client, measurements: Vec::new()}
     }
 }
