@@ -190,17 +190,7 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_temp_float(&self) -> Option<f64> {
-        if let (
-                Some(wholes),
-                Some(fractions),
-            ) = (
-                self.get_temp_wholes(),
-                self.get_temp_fractions(),
-            ) {
-            Some(wholes as f64 + (fractions as f64 / 100.0))
-        } else {
-            None
-        }
+        self._get_measurements().map(|m| m.get_temperature_float())
     }
 
     pub fn get_pressure(&self) -> Option<u16> {
@@ -264,24 +254,20 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_status(&self) -> String {
-        if let (
-            Some(format), Some(hum), Some(temp_wholes),
-            Some(temp_fract), Some(press), Some(acc_x),
-            Some(acc_y), Some(acc_z), Some(batt)) = (
-            self.get_data_format(), self.get_humidity(), self.get_temp_wholes(),
-            self.get_temp_fractions(), self.get_pressure(), self.get_acceleration_x(),
-            self.get_acceleration_y(), self.get_acceleration_z(), self.get_battery()) {
-
-            let hum_perc = hum as f32 * 0.5;
-            let press_corr = 50000 + press as u32;
-
-            format!("format {}\tbattery {}\ntemp {},{}℃\thumidity {:.1}%\tpressure {} Pa\nacc-x {}\tacc-y {}\tacc-z {}",
-                    format, batt, temp_wholes, temp_fract, hum_perc, press_corr, acc_x, acc_y, acc_z)
-        }
-        else {
-            String::from("Invalid manufacturer data")
-        }
-
+        self._get_measurements()
+            .map(|m| {
+                format!(
+                    "battery {}\ntemp {}°C\thumidity {:.1}%\tpressure {} Pa\nacc-x {}\tacc-y {}\tacc-z {}",
+                    m.battery,
+                    m.get_temperature_float(),
+                    m.humidity,
+                    m.pressure,
+                    m.acceleration_x,
+                    m.acceleration_y,
+                    m.acceleration_z,
+                )
+            })
+            .unwrap_or("Invalid manufacturer data".to_string())
     }
 
     fn _get_measurements_json_str(&self) -> Option<String> {
