@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
+use std::time::Duration;
 
 use serde_json;
 
@@ -38,6 +39,7 @@ impl SensorInfo {
 pub struct SensorConf {
     auto: bool,
     address_map: HashMap<String, SensorInfo>,
+    last_seen_forget: Duration,
 }
 
 impl SensorConf {
@@ -53,6 +55,7 @@ impl SensorConf {
         SensorConf{
             auto: args.flag_auto,
             address_map: devicemap,
+            last_seen_forget: Duration::from_secs(args.flag_interval),
         }
     }
 
@@ -125,6 +128,10 @@ impl SensorConf {
         self.address_map
             .get(address)
             .map(|c| c.get_tag())
+    }
+
+    pub fn get_last_seen_forget(&self) -> Duration {
+        self.last_seen_forget
     }
 
 }

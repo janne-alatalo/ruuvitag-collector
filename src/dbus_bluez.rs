@@ -315,6 +315,7 @@ impl DbusBluez {
                             mfr_data,
                             svc_data,
                             meas_timestamp,
+                            self.conf.get_last_seen_forget(),
                         );
                         self.sensor_factory.auto_discover(sensor, dev)
                     },
@@ -328,6 +329,7 @@ impl DbusBluez {
                                     mfr_data,
                                     svc_data,
                                     meas_timestamp,
+                                    self.conf.get_last_seen_forget(),
                                 );
                                 self.sensor_factory.auto_discover(sensor, dev)
                             },
@@ -337,6 +339,7 @@ impl DbusBluez {
                                 bt_device.set_mfr_data(mfr_data);
                                 bt_device.set_svc_data(svc_data);
                                 bt_device.set_measurement_timestamp(meas_timestamp);
+                                bt_device.reset_last_seen();
                                 None
                             },
                         }
@@ -351,6 +354,7 @@ impl DbusBluez {
                     mfr_data,
                     svc_data,
                     meas_timestamp,
+                    self.conf.get_last_seen_forget(),
                 );
                 match self.sensor_factory.get_sensor(dev) {
                     Some(sensor) => {

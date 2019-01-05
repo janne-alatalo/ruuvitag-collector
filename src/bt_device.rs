@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::time::{SystemTime, Duration};
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct BTDevice {
     address: String,
     tag: String,
@@ -8,6 +9,8 @@ pub struct BTDevice {
     mfr_data: Option<HashMap<u16, Vec<u8>>>,
     svc_data: Option<HashMap<String, Vec<u8>>>,
     measurement_timestamp: u64,
+    last_seen: SystemTime,
+    last_seen_forget: Duration,
 }
 
 impl BTDevice {
@@ -19,6 +22,7 @@ impl BTDevice {
         mfr_data: Option<HashMap<u16, Vec<u8>>>,
         svc_data: Option<HashMap<String, Vec<u8>>>,
         measurement_timestamp: u64,
+        last_seen_forget: Duration,
         ) -> BTDevice
     {
 
@@ -29,6 +33,8 @@ impl BTDevice {
             mfr_data: mfr_data,
             svc_data: svc_data,
             measurement_timestamp,
+            last_seen: SystemTime::now(),
+            last_seen_forget,
         }
 
     }
@@ -71,6 +77,24 @@ impl BTDevice {
 
     pub fn get_tag(&self) -> &str {
         &self.tag
+    }
+
+    pub fn reset_last_seen(&mut self) {
+        self.last_seen = SystemTime::now();
+    }
+
+    pub fn seen_more_resently_than(&self, d: Duration) -> bool {
+        let elapsed = match self.last_seen.elapsed() {
+            Ok(e) => e,
+            // In very rare case this could fail. In that case return dummy one millisecond
+            // duration.
+            Err(_) => Duration::from_millis(1),
+        };
+        d > elapsed
+    }
+
+    pub fn is_upto_date(&self) -> bool {
+        self.seen_more_resently_than(self.last_seen_forget)
     }
 
 }

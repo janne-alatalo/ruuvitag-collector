@@ -37,9 +37,11 @@ pub struct StdOutConsumer;
 impl Consumer for StdOutConsumer {
     fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
         for (_, sensor) in sensors {
-            match sensor.get_measurements_str() {
-                Some(s) => println!("{}", s),
-                None => (),
+            if sensor.get_bt_device().is_upto_date() {
+                match sensor.get_measurements_str() {
+                    Some(s) => println!("{}", s),
+                    None => (),
+                }
             }
         }
     }
@@ -50,9 +52,11 @@ pub struct StdOutJsonConsumer;
 impl Consumer for StdOutJsonConsumer {
     fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
         for (_, sensor) in sensors {
-            match sensor.get_measurements_json_str() {
-                Some(s) => println!("{}", s),
-                None => (),
+            if sensor.get_bt_device().is_upto_date() {
+                match sensor.get_measurements_json_str() {
+                    Some(s) => println!("{}", s),
+                    None => (),
+                }
             }
         }
     }
@@ -88,6 +92,9 @@ impl Consumer for InfluxdbConsumer {
     fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
         let mut points_vec = Vec::<Point>::new();
         for (_, sensor) in sensors {
+            if !sensor.get_bt_device().is_upto_date() {
+                continue;
+            }
             match sensor.get_measurements() {
                 Some(measurements) => {
                     let mut point = Point::new("ruuvitag");
