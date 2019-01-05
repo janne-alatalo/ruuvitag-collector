@@ -24,9 +24,6 @@ pub trait BTSensor {
     fn get_bt_device(&self) -> &BTDevice;
     fn get_bt_device_mut(&mut self) -> &mut BTDevice;
 
-    fn reset_last_seen(&mut self);
-    fn get_last_seen(&mut self);
-
     fn get_measurement_timestamp(&self) -> u64;
     fn get_address(&self) -> &str;
     fn get_tag(&self) -> &str;

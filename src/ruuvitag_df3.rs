@@ -25,9 +25,8 @@ impl BTSensorConstructor for RuuvitagDF3Constructor {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct RuuvitagDF3 {
-    last_seen: i32,
     discovery_mode: DiscoveryMode,
     bt_device: BTDevice,
 }
@@ -88,14 +87,6 @@ impl BTSensor for RuuvitagDF3 {
         &self.discovery_mode
     }
 
-    fn reset_last_seen(&mut self) {
-        self.last_seen = 0;
-    }
-
-    fn get_last_seen(&mut self) {
-        self.last_seen += self.last_seen;
-    }
-
     fn get_bt_device(&self) -> &BTDevice {
         &self.bt_device
     }
@@ -127,7 +118,7 @@ static MFR_DATA_FIELD: u16 = 0x0499;
 impl RuuvitagDF3 {
 
     pub fn new(bt_device: BTDevice, discovery_mode: DiscoveryMode) -> RuuvitagDF3 {
-        RuuvitagDF3{bt_device, discovery_mode, ..Default::default()}
+        RuuvitagDF3{bt_device, discovery_mode}
     }
 
     pub fn _is_valid_data(device: &BTDevice) -> bool {
