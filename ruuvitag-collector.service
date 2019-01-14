@@ -8,6 +8,7 @@ EnvironmentFile=/etc/default/ruuvitag-collector
 ExecStart=/home/janne/.cargo/bin/bt-sensor --devicemap /etc/ruuvitag-collector/devicemap.json --consumer influxdb --interval 10
 KillMode=control-group
 Restart=on-failure
+RestartSec=10s
 
 [Install]
 WantedBy=multi-user.target
