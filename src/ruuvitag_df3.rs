@@ -55,7 +55,7 @@ impl BTSensor for RuuvitagDF3 {
                 );
                 map.insert(
                     "humidity".to_string(),
-                    Value::Integer(m.humidity as i64),
+                    Value::Float(m.humidity as f64),
                 );
                 map.insert(
                     "temperature".to_string(),
