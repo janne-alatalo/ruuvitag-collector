@@ -1,7 +1,7 @@
 [package]
 name = "bt-sensor"
 version = "0.1.0"
-authors = ["Janne Alatalo <alatalo.janne@gmail.com>"]
+authors = ["Janne Alatalo <git@janne-alatalo.fi>"]
 
 [dependencies]
 serde = "1.0"
