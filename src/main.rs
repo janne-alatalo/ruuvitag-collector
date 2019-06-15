@@ -38,6 +38,7 @@ Options:
   --manual                   Only search sensors that are configured.
   --interval=<secs>          BT device Poll interval [default: 3].
   --consumer=<type>          The consumer type [default: stdout].
+  --list                     List all sensors and exit.
   <device>                   Device address map (MAC,tag,type)
 ";
 
@@ -48,6 +49,7 @@ pub struct Args {
     flag_manual: bool,
     flag_interval: u64,
     flag_consumer: consumer::ConsumerType,
+    flag_list: bool,
     arg_device: Vec<String>,
 }
 
@@ -63,11 +65,25 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let mut dbus = dbus_bluez::DbusBluez::new(conf, args.flag_btdevice.to_string())?;
     let duration = time::Duration::from_secs(args.flag_interval);
     dbus.initialize()?;
-    let mut consumer = consumer::initialize_consumer(&args.flag_consumer)?;
-    loop {
+    if !args.flag_list {
+        let mut consumer = consumer::initialize_consumer(&args.flag_consumer)?;
+        loop {
+            let sensors = dbus.get_sensors()?;
+            consumer.consume(&sensors);
+            thread::sleep(duration);
+        }
+    } else {
         let sensors = dbus.get_sensors()?;
-        consumer.consume(&sensors);
-        thread::sleep(duration);
+        for (_, sensor) in sensors {
+            match sensor.get_measurements_str() {
+                Some(s) => {
+                    println!("Address: {}", sensor.get_address());
+                    println!("{}\n", s);
+                },
+                None => (),
+            }
+        }
+        Ok(())
     }
 }
 
