@@ -145,12 +145,12 @@ impl RuuvitagDF3 {
             .map(|v| *v)
     }
 
-    pub fn get_humidity(&self) -> Option<u8> {
+    pub fn get_humidity(&self) -> Option<f32> {
         self.bt_device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(1)
-            .map(|v| *v)
+            .map(|v| *v as f32 / 2.)
     }
 
     pub fn get_temp_wholes(&self) -> Option<u8> {
@@ -313,7 +313,7 @@ impl RuuvitagDF3 {
 pub struct RuuvitagDF3Meas {
     data_format: u8,
     battery: u16,
-    humidity: u8,
+    humidity: f32,
     temperature: u8,
     temperature_sign: i8,
     temperature_fractions: u8,
