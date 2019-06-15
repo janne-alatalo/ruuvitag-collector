@@ -35,7 +35,7 @@ Options:
   --version                  Show version.
   --devicemap=<conf>         Device address to device type map file.
   --btdevice=<device>        Bluetooth device name [default: hci0].
-  --auto=<mode>              Discovery mode [default: true].
+  --manual                   Only search sensors that are configured.
   --interval=<secs>          BT device Poll interval [default: 3].
   --consumer=<type>          The consumer type [default: stdout].
   <device>                   Device address map (MAC,tag,type)
@@ -45,7 +45,7 @@ Options:
 pub struct Args {
     flag_devicemap: Option<String>,
     flag_btdevice: String,
-    flag_auto: bool,
+    flag_manual: bool,
     flag_interval: u64,
     flag_consumer: consumer::ConsumerType,
     arg_device: Vec<String>,

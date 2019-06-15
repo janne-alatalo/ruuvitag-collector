@@ -53,7 +53,7 @@ impl SensorConf {
         let arg_devicemap = SensorConf::parse_arg_devicemaps(&args.arg_device);
         devicemap.extend(arg_devicemap);
         SensorConf{
-            auto: args.flag_auto,
+            auto: !args.flag_manual,
             address_map: devicemap,
             last_seen_forget: Duration::from_secs(args.flag_interval),
         }
