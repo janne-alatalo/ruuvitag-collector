@@ -264,7 +264,7 @@ impl DbusBluez {
                                     MessageItem::Variant(ref v) => v.inner().unwrap(),
                                     _ => panic!("Expected Variant"),
                                 };
-                                info!("{:?}", key_val);
+                                debug!("{:?}", key_val);
                                 address = key_val;
                             },
                             "ManufacturerData" => {
