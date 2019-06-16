@@ -59,12 +59,35 @@ impl BTDevice {
         self.address = address;
     }
 
-    pub fn set_mfr_data(&mut self, mfr_data: Option<HashMap<u16, Vec<u8>>>) {
-        self.mfr_data = mfr_data;
+    pub fn update_data(
+        &mut self,
+        mfr_data: Option<HashMap<u16,Vec<u8>>>,
+        svc_data: Option<HashMap<String, Vec<u8>>>,
+        meas_timestamp: u64
+        ) -> ()
+    {
+        if self.set_mfr_data(mfr_data) || self.set_svc_data(svc_data) {
+            self.set_measurement_timestamp(meas_timestamp);
+            self.reset_last_seen();
+        }
     }
 
-    pub fn set_svc_data(&mut self, svc_data: Option<HashMap<String, Vec<u8>>>) {
+    pub fn set_mfr_data(&mut self, mfr_data: Option<HashMap<u16, Vec<u8>>>) -> bool {
+        if self.mfr_data == mfr_data {
+            debug!("{} mfr data not updated", self.get_address());
+            return false
+        }
+        self.mfr_data = mfr_data;
+        true
+    }
+
+    pub fn set_svc_data(&mut self, svc_data: Option<HashMap<String, Vec<u8>>>) -> bool {
+        if self.svc_data == svc_data {
+            debug!("{} svc data not updated", self.get_address());
+            return false
+        }
         self.svc_data = svc_data;
+        true
     }
 
     pub fn set_measurement_timestamp(&mut self, meas_timestamp: u64) {

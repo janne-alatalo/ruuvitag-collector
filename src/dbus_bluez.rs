@@ -308,38 +308,21 @@ impl DbusBluez {
                 let mut sensor = e.get_mut();
                 match sensor.get_discovery_mode().clone() {
                     DiscoveryMode::Auto => {
-                        let dev = BTDevice::new(
-                            object_path.to_string(),
-                            address.to_string(),
-                            tag.to_string(),
-                            mfr_data,
-                            svc_data,
-                            meas_timestamp,
-                            self.conf.get_last_seen_forget(),
-                        );
-                        self.sensor_factory.auto_discover(sensor, dev)
+                        let mut bt_device = sensor.get_bt_device_mut().clone();
+                        bt_device.update_data(mfr_data, svc_data, meas_timestamp);
+                        self.sensor_factory.auto_discover(sensor, bt_device)
                     },
                     DiscoveryMode::Configured(sensor_type) => {
                         match sensor_type == "auto" {
                             true => {
-                                let dev = BTDevice::new(
-                                    object_path.to_string(),
-                                    address.to_string(),
-                                    tag.to_string(),
-                                    mfr_data,
-                                    svc_data,
-                                    meas_timestamp,
-                                    self.conf.get_last_seen_forget(),
-                                );
-                                self.sensor_factory.auto_discover(sensor, dev)
+                                let mut bt_device = sensor.get_bt_device_mut().clone();
+                                bt_device.update_data(mfr_data, svc_data, meas_timestamp);
+                                self.sensor_factory.auto_discover(sensor, bt_device)
                             },
                             _ => {
                                 let bt_device = sensor.get_bt_device_mut();
                                 bt_device.set_address(address.to_string());
-                                bt_device.set_mfr_data(mfr_data);
-                                bt_device.set_svc_data(svc_data);
-                                bt_device.set_measurement_timestamp(meas_timestamp);
-                                bt_device.reset_last_seen();
+                                bt_device.update_data(mfr_data, svc_data, meas_timestamp);
                                 None
                             },
                         }
