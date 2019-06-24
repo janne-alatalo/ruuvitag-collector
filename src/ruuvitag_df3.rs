@@ -1,9 +1,12 @@
+use std::rc::Rc;
+use std::cell::{RefCell, Ref};
 use std::collections::HashMap;
 
 use serde_json;
 
-use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor, Value};
+use bt_sensor::{BTSensor, BTSensorConstructor, Value};
 use bt_device::BTDevice;
+use discovery_mode::DiscoveryMode;
 
 pub struct RuuvitagDF3Constructor;
 
@@ -17,7 +20,7 @@ impl BTSensorConstructor for RuuvitagDF3Constructor {
     fn get_name(&self) -> &'static str {
         "RuuvitagDF3"
     }
-    fn construct(&self, device: BTDevice, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
+    fn construct(&self, device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
         Box::new(RuuvitagDF3::new(device, discovery_mode))
     }
     fn is_valid_data(&self, device: &BTDevice) -> bool {
@@ -25,16 +28,16 @@ impl BTSensorConstructor for RuuvitagDF3Constructor {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct RuuvitagDF3 {
     discovery_mode: DiscoveryMode,
-    bt_device: BTDevice,
+    bt_device: Rc<RefCell<BTDevice>>,
 }
 
 impl BTSensor for RuuvitagDF3 {
 
-    fn is_valid_data(&self, device: &BTDevice) -> bool {
-        RuuvitagDF3::_is_valid_data(device)
+    fn is_valid_data(&self) -> bool {
+        RuuvitagDF3::_is_valid_data(&self.bt_device.borrow())
     }
 
     fn get_measurements_json_str(&self) -> Option<String> {
@@ -87,32 +90,20 @@ impl BTSensor for RuuvitagDF3 {
         }
     }
 
-    fn get_discovery_mode(&self) -> &DiscoveryMode {
-        &self.discovery_mode
+    fn get_bt_device(&self) -> Ref<BTDevice> {
+        self.bt_device.borrow()
     }
 
-    fn get_bt_device(&self) -> &BTDevice {
-        &self.bt_device
+    fn get_address(&self) -> String {
+        self.get_bt_device().get_address().to_string()
     }
 
-    fn get_bt_device_mut(&mut self) -> &mut BTDevice {
-        &mut self.bt_device
-    }
-
-    fn get_address(&self) -> &str {
-        self.get_bt_device().get_address()
-    }
-
-    fn get_tag(&self) -> &str {
-        self.get_bt_device().get_tag()
+    fn get_tag(&self) -> String {
+        self.get_bt_device().get_tag().to_string()
     }
 
     fn get_measurement_timestamp(&self) -> u64 {
         self.get_bt_device().get_measurement_timestamp()
-    }
-
-    fn set_device(&mut self, bt_device: BTDevice) {
-        self.bt_device = bt_device;
     }
 
 }
@@ -121,7 +112,7 @@ static MFR_DATA_FIELD: u16 = 0x0499;
 
 impl RuuvitagDF3 {
 
-    pub fn new(bt_device: BTDevice, discovery_mode: DiscoveryMode) -> RuuvitagDF3 {
+    pub fn new(bt_device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> RuuvitagDF3 {
         RuuvitagDF3{bt_device, discovery_mode}
     }
 
@@ -142,7 +133,7 @@ impl RuuvitagDF3 {
     // See https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
     // for the specification
     pub fn get_data_format(&self) -> Option<u8> {
-        self.bt_device
+        self.get_bt_device()
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(0)
@@ -150,7 +141,7 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_humidity(&self) -> Option<f32> {
-        self.bt_device
+        self.get_bt_device()
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(1)
@@ -158,7 +149,7 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_temp_wholes(&self) -> Option<u8> {
-        self.bt_device
+        self.get_bt_device()
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(2)
@@ -168,7 +159,7 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_temp_sign(&self) -> Option<i8> {
-        self.bt_device
+        self.get_bt_device()
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(2)
@@ -181,7 +172,7 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_temp_fractions(&self) -> Option<u8> {
-        self.bt_device
+        self.get_bt_device()
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(3)
@@ -193,11 +184,12 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_pressure(&self) -> Option<u16> {
-        let pressure_top = self.bt_device
+        let device = self.get_bt_device();
+        let pressure_top = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(4)?;
-        let pressure_bottom = self.bt_device
+        let pressure_bottom = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(5)?;
@@ -205,11 +197,12 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_acceleration_x(&self) -> Option<i16> {
-        let acc_x_top = self.bt_device
+        let device = self.get_bt_device();
+        let acc_x_top = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(6)?;
-        let acc_x_bottom = self.bt_device
+        let acc_x_bottom = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(7)?;
@@ -217,11 +210,12 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_acceleration_y(&self) -> Option<i16> {
-        let acc_y_top = self.bt_device
+        let device = self.get_bt_device();
+        let acc_y_top = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(8)?;
-        let acc_y_bottom = self.bt_device
+        let acc_y_bottom = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(9)?;
@@ -229,11 +223,12 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_acceleration_z(&self) -> Option<i16> {
-        let acc_z_top = self.bt_device
+        let device = self.get_bt_device();
+        let acc_z_top = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(10)?;
-        let acc_z_bottom = self.bt_device
+        let acc_z_bottom = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(11)?;
@@ -241,11 +236,12 @@ impl RuuvitagDF3 {
     }
 
     pub fn get_battery(&self) -> Option<u16> {
-        let batt_top = self.bt_device
+        let device = self.get_bt_device();
+        let batt_top = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(12)?;
-        let batt_bottom = self.bt_device
+        let batt_bottom = device
             .get_mfr_data()?
             .get(&MFR_DATA_FIELD)?
             .get(13)?;
@@ -288,8 +284,8 @@ impl RuuvitagDF3 {
 
             let press_corr = 50000 + press as u32;
 
-            let tag = self.bt_device.get_tag().to_string();
-            let address = self.bt_device.get_address().to_string();
+            let tag = self.get_bt_device().get_tag().to_string();
+            let address = self.get_bt_device().get_address().to_string();
 
             let meas = RuuvitagDF3Meas{
                 data_format: format,

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::env;
 
 use influx_db_client::{
@@ -15,7 +14,7 @@ pub enum ConsumerType {
 }
 
 pub trait Consumer {
-    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>);
+    fn consume(&mut self, sensors: &[&BTSensor]);
 }
 
 pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>, String> {
@@ -35,11 +34,14 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
 pub struct StdOutConsumer;
 
 impl Consumer for StdOutConsumer {
-    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
-        for (_, sensor) in sensors {
+    fn consume(&mut self, sensors: &[&BTSensor]) {
+        for sensor in sensors {
             if sensor.get_bt_device().is_upto_date() {
                 match sensor.get_measurements_str() {
-                    Some(s) => println!("{}", s),
+                    Some(s) => {
+                        println!("Address: {}", sensor.get_address());
+                        println!("{}", s);
+                    },
                     None => (),
                 }
             }
@@ -50,8 +52,8 @@ impl Consumer for StdOutConsumer {
 pub struct StdOutJsonConsumer;
 
 impl Consumer for StdOutJsonConsumer {
-    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
-        for (_, sensor) in sensors {
+    fn consume(&mut self, sensors: &[&BTSensor]) {
+        for sensor in sensors {
             if sensor.get_bt_device().is_upto_date() {
                 match sensor.get_measurements_json_str() {
                     Some(s) => println!("{}", s),
@@ -89,9 +91,9 @@ impl InfluxdbConsumer {
 }
 
 impl Consumer for InfluxdbConsumer {
-    fn consume(&mut self, sensors: &HashMap<String, Box<BTSensor>>) {
+    fn consume(&mut self, sensors: &[&BTSensor]) {
         let mut points_vec = Vec::<Point>::new();
-        for (_, sensor) in sensors {
+        for sensor in sensors {
             if !sensor.get_bt_device().is_upto_date() {
                 continue;
             }

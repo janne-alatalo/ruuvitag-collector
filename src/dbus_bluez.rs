@@ -1,6 +1,8 @@
 use std::error;
 use std::{thread, time::{Duration, SystemTime}};
 use std::collections::{HashMap, hash_map::Entry};
+use std::rc::Rc;
+use std::cell::{RefCell, Ref};
 
 use dbus::{
     Message, MessageItem, MessageItemArray,
@@ -9,9 +11,10 @@ use dbus::{
 
 use  error::BlueZError;
 use bt_sensor_factory::BTSensorFactory;
-use bt_sensor::{BTSensor, DiscoveryMode};
+use bt_sensor::{BTSensor};
 use config;
 use bt_device::BTDevice;
+use consumer::Consumer;
 
 macro_rules! dbus_err {
     ($msg:expr) => {
@@ -29,7 +32,7 @@ static BLUEZ_SET_DISCOVERY_FILTER: &'static str = "SetDiscoveryFilter";
 pub struct DbusBluez {
     conn: Connection,
     sensor_factory: BTSensorFactory,
-    sensor_map: HashMap<String, Box<BTSensor>>,
+    device_map: HashMap<String, Rc<RefCell<BTDevice>>>,
     bluez_obj_path: String,
     conf: config::SensorConf,
 }
@@ -41,7 +44,7 @@ impl DbusBluez {
         let bus = DbusBluez{
             conn: Connection::get_private(BusType::System)?,
             sensor_factory: BTSensorFactory::new(conf.clone()),
-            sensor_map: HashMap::new(),
+            device_map: HashMap::new(),
             bluez_obj_path: bluez_obj_path,
             conf: conf,
         };
@@ -284,7 +287,7 @@ impl DbusBluez {
                     }
                     let millis = timestamp.subsec_millis() as u64;
                     let unix_ts = timestamp.as_secs() * 1000 + millis;
-                    self._update_sensor(path_str, address, mfr_data, svc_data, unix_ts)?;
+                    self._update_device(path_str, address, mfr_data, svc_data, unix_ts)?;
                 }
             }
         }
@@ -292,7 +295,7 @@ impl DbusBluez {
 
     }
 
-    fn _update_sensor(
+    fn _update_device(
         &mut self,
         object_path: &str,
         address: &str,
@@ -303,34 +306,14 @@ impl DbusBluez {
     {
 
         let tag = self.conf.get_sensor_tag(address).unwrap_or(address);
-        let swap = match self.sensor_map.entry(object_path.to_string()) {
+        match self.device_map.entry(object_path.to_string()) {
             Entry::Occupied(mut e) => {
-                let mut sensor = e.get_mut();
-                match sensor.get_discovery_mode().clone() {
-                    DiscoveryMode::Auto => {
-                        let mut bt_device = sensor.get_bt_device_mut().clone();
-                        bt_device.update_data(mfr_data, svc_data, meas_timestamp);
-                        self.sensor_factory.auto_discover(sensor, bt_device)
-                    },
-                    DiscoveryMode::Configured(sensor_type) => {
-                        match sensor_type == "auto" {
-                            true => {
-                                let mut bt_device = sensor.get_bt_device_mut().clone();
-                                bt_device.update_data(mfr_data, svc_data, meas_timestamp);
-                                self.sensor_factory.auto_discover(sensor, bt_device)
-                            },
-                            _ => {
-                                let bt_device = sensor.get_bt_device_mut();
-                                bt_device.set_address(address.to_string());
-                                bt_device.update_data(mfr_data, svc_data, meas_timestamp);
-                                None
-                            },
-                        }
-                    },
-                }
+                let mut device = e.get_mut();
+                device.borrow_mut().update_data(mfr_data, svc_data, meas_timestamp);
+                self.sensor_factory.set_sensor(device.clone());
             },
             Entry::Vacant(e) => {
-                let dev = BTDevice::new(
+                let device = Rc::new(RefCell::new(BTDevice::new(
                     object_path.to_string(),
                     address.to_string(),
                     tag.to_string(),
@@ -338,28 +321,30 @@ impl DbusBluez {
                     svc_data,
                     meas_timestamp,
                     self.conf.get_last_seen_forget(),
-                );
-                match self.sensor_factory.get_sensor(dev) {
-                    Some(sensor) => {
-                        e.insert(sensor);
-                        None
-                    },
-                    None => None,
+                    self.sensor_factory.get_sensor_discovery_mode(address),
+                )));
+                self.sensor_factory.set_sensor(device.clone());
+                if device.borrow().get_sensor().is_some() {
+                    e.insert(device);
                 }
             }
         };
-
-        if let Some(new_val) = swap {
-            self.sensor_map.insert(object_path.to_string(), new_val);
-        }
 
         Ok(())
 
     }
 
-    pub fn get_sensors(&mut self) -> Result<&HashMap<String, Box<BTSensor>>, BoxErr> {
+    pub fn consume(&mut self, consumer: &mut Consumer) -> Result<(), BoxErr> {
         self.update_sensors()?;
-        Ok(&self.sensor_map)
+        let devices: Vec<Ref<BTDevice>> = self.device_map.iter()
+            .map(|(_, d)| d.borrow())
+            .collect();
+        let sensors: Vec<&BTSensor> = devices.iter()
+            .filter_map(|d| d.get_sensor())
+            .map(|b| &**b)
+            .collect();
+        consumer.consume(&sensors);
+        Ok(())
     }
 
 }

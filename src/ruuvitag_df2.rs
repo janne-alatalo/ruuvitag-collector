@@ -1,10 +1,13 @@
 use std::str;
+use std::rc::Rc;
+use std::cell::{RefCell, Ref};
 use std::collections::HashMap;
 
 use base64;
 use serde_json;
 
-use bt_sensor::{DiscoveryMode, BTSensor, BTSensorConstructor, Value};
+use bt_sensor::{BTSensor, BTSensorConstructor, Value};
+use discovery_mode::DiscoveryMode;
 use bt_device::BTDevice;
 
 pub struct RuuvitagDF2Constructor;
@@ -19,7 +22,7 @@ impl BTSensorConstructor for RuuvitagDF2Constructor {
     fn get_name(&self) -> &'static str {
         "RuuvitagDF2"
     }
-    fn construct(&self, device: BTDevice, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
+    fn construct(&self, device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
         Box::new(RuuvitagDF2::new(device, discovery_mode))
     }
     fn is_valid_data(&self, device: &BTDevice) -> bool {
@@ -27,16 +30,16 @@ impl BTSensorConstructor for RuuvitagDF2Constructor {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct RuuvitagDF2 {
     discovery_mode: DiscoveryMode,
-    bt_device: BTDevice,
+    bt_device: Rc<RefCell<BTDevice>>,
 }
 
 impl BTSensor for RuuvitagDF2 {
 
-    fn is_valid_data(&self, device: &BTDevice) -> bool {
-        RuuvitagDF2::_is_valid_data(device)
+    fn is_valid_data(&self) -> bool {
+        RuuvitagDF2::_is_valid_data(&self.bt_device.borrow())
     }
 
     fn get_measurements_str(&self) -> Option<String> {
@@ -69,32 +72,20 @@ impl BTSensor for RuuvitagDF2 {
         }
     }
 
-    fn get_discovery_mode(&self) -> &DiscoveryMode {
-        &self.discovery_mode
+    fn get_bt_device(&self) -> Ref<BTDevice> {
+        self.bt_device.borrow()
     }
 
-    fn get_bt_device(&self) -> &BTDevice {
-        &self.bt_device
+    fn get_address(&self) -> String {
+        self.get_bt_device().get_address().to_string()
     }
 
-    fn get_bt_device_mut(&mut self) -> &mut BTDevice {
-        &mut self.bt_device
-    }
-
-    fn get_address(&self) -> &str {
-        self.get_bt_device().get_address()
-    }
-
-    fn get_tag(&self) -> &str {
-        self.get_bt_device().get_tag()
+    fn get_tag(&self) -> String {
+        self.get_bt_device().get_tag().to_string()
     }
 
     fn get_measurement_timestamp(&self) -> u64 {
         self.get_bt_device().get_measurement_timestamp()
-    }
-
-    fn set_device(&mut self, bt_device: BTDevice) {
-        self.bt_device = bt_device;
     }
 
 }
@@ -103,7 +94,7 @@ static SVC_DATA_UUID: &'static str = "0000feaa-0000-1000-8000-00805f9b34fb";
 
 impl RuuvitagDF2 {
 
-    pub fn new(bt_device: BTDevice, discovery_mode: DiscoveryMode) -> RuuvitagDF2 {
+    pub fn new(bt_device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> RuuvitagDF2 {
         RuuvitagDF2{bt_device, discovery_mode}
     }
 
@@ -164,7 +155,8 @@ impl RuuvitagDF2 {
     }
 
     fn _get_measurements(&self) -> Option<RuuvitagDF2Meas> {
-        let data_vec = self.bt_device
+        let device = self.get_bt_device();
+        let data_vec = device
             .get_svc_data()?
             .get(SVC_DATA_UUID)?;
 
@@ -190,8 +182,8 @@ impl RuuvitagDF2 {
 
             let press_corr = 50000 + press as u32;
 
-            let tag = self.bt_device.get_tag().to_string();
-            let address = self.bt_device.get_address().to_string();
+            let tag = self.get_bt_device().get_tag().to_string();
+            let address = self.get_bt_device().get_address().to_string();
 
             let meas = RuuvitagDF2Meas{
                 data_format: format,

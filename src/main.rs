@@ -8,6 +8,7 @@ extern crate base64;
 extern crate influx_db_client;
 
 mod bt_sensor_factory;
+mod discovery_mode;
 mod ruuvitag_df3;
 mod ruuvitag_df2;
 mod dbus_bluez;
@@ -68,21 +69,12 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     if !args.flag_list {
         let mut consumer = consumer::initialize_consumer(&args.flag_consumer)?;
         loop {
-            let sensors = dbus.get_sensors()?;
-            consumer.consume(&sensors);
+            dbus.consume(&mut *consumer)?;
             thread::sleep(duration);
         }
     } else {
-        let sensors = dbus.get_sensors()?;
-        for (_, sensor) in sensors {
-            match sensor.get_measurements_str() {
-                Some(s) => {
-                    println!("Address: {}", sensor.get_address());
-                    println!("{}\n", s);
-                },
-                None => (),
-            }
-        }
+        let mut consumer = consumer::initialize_consumer(&consumer::ConsumerType::StdOut)?;
+        dbus.consume(&mut *consumer)?;
         Ok(())
     }
 }

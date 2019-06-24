@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::time::{SystemTime, Duration};
 
-#[derive(Debug, Clone)]
+use bt_sensor::BTSensor;
+use discovery_mode::DiscoveryMode;
+
 pub struct BTDevice {
     address: String,
     tag: String,
@@ -11,6 +13,8 @@ pub struct BTDevice {
     measurement_timestamp: u64,
     last_seen: SystemTime,
     last_seen_forget: Duration,
+    discovery_mode: DiscoveryMode,
+    bt_sensor: Option<Box<BTSensor>>,
 }
 
 impl BTDevice {
@@ -23,6 +27,7 @@ impl BTDevice {
         svc_data: Option<HashMap<String, Vec<u8>>>,
         measurement_timestamp: u64,
         last_seen_forget: Duration,
+        discovery_mode: DiscoveryMode,
         ) -> BTDevice
     {
 
@@ -35,6 +40,8 @@ impl BTDevice {
             measurement_timestamp,
             last_seen: SystemTime::now(),
             last_seen_forget,
+            discovery_mode,
+            bt_sensor: None,
         }
 
     }
@@ -118,6 +125,22 @@ impl BTDevice {
 
     pub fn is_upto_date(&self) -> bool {
         self.seen_more_resently_than(self.last_seen_forget)
+    }
+
+    pub fn get_discovery_mode(&self) -> DiscoveryMode {
+        self.discovery_mode.clone()
+    }
+
+    pub fn set_sensor(&mut self, sensor: Box<BTSensor>) {
+        self.bt_sensor = Some(sensor);
+    }
+
+    pub fn unset_sensor(&mut self) {
+        self.bt_sensor = None;
+    }
+
+    pub fn get_sensor(&self) -> Option<&Box<BTSensor>> {
+        self.bt_sensor.as_ref()
     }
 
 }
