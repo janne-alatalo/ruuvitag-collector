@@ -341,7 +341,6 @@ impl DbusBluez {
             .collect();
         let sensors: Vec<&BTSensor> = devices.iter()
             .filter_map(|d| d.get_sensor())
-            .map(|b| &**b)
             .collect();
         consumer.consume(&sensors);
         Ok(())

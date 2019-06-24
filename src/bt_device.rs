@@ -139,8 +139,8 @@ impl BTDevice {
         self.bt_sensor = None;
     }
 
-    pub fn get_sensor(&self) -> Option<&Box<BTSensor>> {
-        self.bt_sensor.as_ref()
+    pub fn get_sensor(&self) -> Option<&BTSensor> {
+        self.bt_sensor.as_ref().map(|b| &**b)
     }
 
 }
