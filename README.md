@@ -6,10 +6,6 @@ linux. The program can print the measurements to stdout or send them to
 influxdb.
 
 
-**Note!** the program is still a bit rough. Sometimes it loses connection to
-the tag and just reads the same old value over and over again, even if it
-hasn't seen the tag for a while.
-
 # Installation for RPI3 Arch
 
 ```
