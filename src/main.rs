@@ -58,7 +58,7 @@ fn run<'a>() -> Result<(), Box<std::error::Error>> {
     let args: Args = Docopt::new(USAGE)
         .and_then(|docopt| {
             docopt
-                .version(Some("0.1.4".to_string()))
+                .version(Some("0.1.5".to_string()))
                 .deserialize()
         })
         .unwrap_or_else(|e| e.exit());
