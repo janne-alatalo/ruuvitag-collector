@@ -150,6 +150,13 @@ INFLUXDB_USER=ruuvitag
 RUST_LOG=info
 ```
 
+Start and enable the service.
+
+```
+sudo systemctl start ruuvitag-collector
+sudo systemctl enable ruuvitag-collector
+```
+
 # Problems
 
 The following error might appear when trying to run the program:
