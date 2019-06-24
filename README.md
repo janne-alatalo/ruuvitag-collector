@@ -5,8 +5,26 @@ bluetooth sensor. It uses bluez stack through d-bus, meaning it works only on
 linux. The program can print the measurements to stdout or send them to
 influxdb.
 
+# Installation
 
-# Installation for RPI3 Arch
+## Install the Rust programming language
+
+https://www.rust-lang.org/tools/install
+
+## Installation for Rasperry pi 3 on Raspbian (default OS)
+
+Install the build dependencies.
+
+```
+sudo apt install libdbus-1-dev libssl-dev
+```
+
+This should be enough for raspbian. Jump to the *Download and Compile the
+software* part.
+
+## Installation for Rasperry pi 3 on Arch Linux
+
+Setup bluetooth.
 
 ```
 sudo pacman -S bluez bluez-utils
@@ -56,21 +74,21 @@ sudo systemctl start brcm43438.service
 sudo systemctl start bluetooth.service
 ```
 
-The following error might appear when trying to run the program:
+## Download and Compile the software
+
+Create download directory and clone the project.
 
 ```
-bt_sensor: D-Bus error: Method "Get" with signature "ss" on interface "org.freedesktop.DBus.Properties" doesn't exist
-```
-
-In that case, try to change the `btdevice` option. Example:
-
-```
-bt-sensor --btdevice hci1
+sudo mkdir -p /opt/ruuvitag-collector
+cd /opt/ruuvitag-collector
+sudo chown $USER .
+git clone https://github.com/janne-alatalo/ruuvitag-collector.git .
+cargo build --release
 ```
 
 # If you are using influxdb consumer
 
-## Create database and user
+## Create the database and the database user
 
 On influxdb cli, run the following commands:
 
@@ -97,10 +115,15 @@ CREATE RETENTION POLICY "forever" on "ruuvitag" DURATION 0s REPLICATION 1;
 CREATE CONTINUOUS QUERY "downsample_ruuvitag" ON "ruuvitag" BEGIN SELECT mean(*) INTO "forever"."ruuvitag" FROM "two_weeks"."ruuvitag" GROUP BY time(5m),"tag" END
 ```
 
-If you want to enable the collector as a service with systemd, copy the
-`ruuvitag-collector.service` file from this repository to
-`/etc/systemd/system`. Then create a devicemap file to
-`/etc/ruuvitag-collector/devicemap.json`.
+# Configure the software
+
+Copy the unit file form the repository.
+
+```
+sudo cp /opt/ruuvitag-collector/ruuvitag-collector.service /etc/systemd/system/ruuvitag-collector.service
+```
+
+Then create a devicemap file to `/etc/ruuvitag-collector/devicemap.json`.
 
 ```
 # example of devicemap.json file
@@ -124,5 +147,19 @@ INFLUXDB_URL=http://10.8.0.1:8086
 # the database
 INFLUXDB_PASSWORD=some_secret_password
 INFLUXDB_USER=ruuvitag
-RUST_LOG=warning
+RUST_LOG=info
+```
+
+# Problems
+
+The following error might appear when trying to run the program:
+
+```
+bt_sensor: D-Bus error: Method "Get" with signature "ss" on interface "org.freedesktop.DBus.Properties" doesn't exist
+```
+
+In that case, try to change the `btdevice` option. Example:
+
+```
+bt-sensor --btdevice hci1
 ```
