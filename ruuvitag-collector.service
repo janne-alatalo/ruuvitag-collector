@@ -5,7 +5,7 @@ Wants=bluetooth.target
 
 [Service]
 EnvironmentFile=/etc/default/ruuvitag-collector
-ExecStart=/home/janne/.cargo/bin/bt-sensor --devicemap /etc/ruuvitag-collector/devicemap.json --consumer influxdb --interval 10
+ExecStart=/opt/ruuvitag-collector/target/release/bt-sensor --devicemap /etc/ruuvitag-collector/devicemap.json --consumer influxdb --interval 10
 KillMode=control-group
 Restart=on-failure
 RestartSec=10s
