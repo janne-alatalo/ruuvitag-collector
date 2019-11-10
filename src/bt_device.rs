@@ -14,7 +14,7 @@ pub struct BTDevice {
     last_seen: SystemTime,
     last_seen_forget: Duration,
     discovery_mode: DiscoveryMode,
-    bt_sensor: Option<Box<BTSensor>>,
+    bt_sensor: Option<Box<dyn BTSensor>>,
 }
 
 impl BTDevice {
@@ -131,7 +131,7 @@ impl BTDevice {
         self.discovery_mode.clone()
     }
 
-    pub fn set_sensor(&mut self, sensor: Box<BTSensor>) {
+    pub fn set_sensor(&mut self, sensor: Box<dyn BTSensor>) {
         self.bt_sensor = Some(sensor);
     }
 
@@ -139,7 +139,7 @@ impl BTDevice {
         self.bt_sensor = None;
     }
 
-    pub fn get_sensor(&self) -> Option<&BTSensor> {
+    pub fn get_sensor(&self) -> Option<&dyn BTSensor> {
         self.bt_sensor.as_ref().map(|b| &**b)
     }
 

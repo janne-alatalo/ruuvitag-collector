@@ -54,7 +54,7 @@ pub struct Args {
     arg_device: Vec<String>,
 }
 
-fn run<'a>() -> Result<(), Box<std::error::Error>> {
+fn run<'a>() -> Result<(), Box<dyn std::error::Error>> {
     let args: Args = Docopt::new(USAGE)
         .and_then(|docopt| {
             docopt

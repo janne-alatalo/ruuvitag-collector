@@ -22,7 +22,7 @@ impl BTSensorConstructor for RuuvitagDF2Constructor {
     fn get_name(&self) -> &'static str {
         "RuuvitagDF2"
     }
-    fn construct(&self, device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> Box<BTSensor> {
+    fn construct(&self, device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> Box<dyn BTSensor> {
         Box::new(RuuvitagDF2::new(device, discovery_mode))
     }
     fn is_valid_data(&self, device: &BTDevice) -> bool {

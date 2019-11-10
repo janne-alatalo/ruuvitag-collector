@@ -12,7 +12,7 @@ use discovery_mode::DiscoveryMode;
 
 pub struct BTSensorFactory {
     conf: config::SensorConf,
-    sensor_constructors: HashMap<&'static str, Box<BTSensorConstructor>>,
+    sensor_constructors: HashMap<&'static str, Box<dyn BTSensorConstructor>>,
 }
 
 impl BTSensorFactory {
@@ -87,7 +87,7 @@ impl BTSensorFactory {
         }
     }
 
-    fn get_sensor_type(&self, sensor_type: &str, bt_device: Rc<RefCell<BTDevice>>) -> Option<Box<BTSensor>> {
+    fn get_sensor_type(&self, sensor_type: &str, bt_device: Rc<RefCell<BTDevice>>) -> Option<Box<dyn BTSensor>> {
         if sensor_type == "auto" {
             return self.autofind_sensor_type(bt_device)
         }
@@ -100,7 +100,7 @@ impl BTSensorFactory {
         }
     }
 
-    fn autofind_sensor_type(&self, bt_device: Rc<RefCell<BTDevice>>) -> Option<Box<BTSensor>> {
+    fn autofind_sensor_type(&self, bt_device: Rc<RefCell<BTDevice>>) -> Option<Box<dyn BTSensor>> {
         for (_, v) in &self.sensor_constructors {
             let is_valid_data = v.is_valid_data(&bt_device.borrow());
             match is_valid_data {

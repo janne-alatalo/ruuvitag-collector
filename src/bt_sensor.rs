@@ -23,7 +23,7 @@ pub trait BTSensor {
 
 pub trait BTSensorConstructor {
     fn get_name(&self) -> &'static str;
-    fn construct(&self, device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> Box<BTSensor>;
+    fn construct(&self, device: Rc<RefCell<BTDevice>>, discovery_mode: DiscoveryMode) -> Box<dyn BTSensor>;
     fn is_valid_data(&self, device: &BTDevice) -> bool;
 }
 

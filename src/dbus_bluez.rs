@@ -22,7 +22,7 @@ macro_rules! dbus_err {
     };
 }
 
-type BoxErr = Box<error::Error>;
+type BoxErr = Box<dyn error::Error>;
 
 static BLUEZ_SERVICE: &'static str = "org.bluez";
 static BLUEZ_INTERFACE_ADAPTER1: &'static str = "org.bluez.Adapter1";
@@ -334,12 +334,12 @@ impl DbusBluez {
 
     }
 
-    pub fn consume(&mut self, consumer: &mut Consumer) -> Result<(), BoxErr> {
+    pub fn consume(&mut self, consumer: &mut dyn Consumer) -> Result<(), BoxErr> {
         self.update_sensors()?;
         let devices: Vec<Ref<BTDevice>> = self.device_map.iter()
             .map(|(_, d)| d.borrow())
             .collect();
-        let sensors: Vec<&BTSensor> = devices.iter()
+        let sensors: Vec<&dyn BTSensor> = devices.iter()
             .filter_map(|d| d.get_sensor())
             .collect();
         consumer.consume(&sensors);

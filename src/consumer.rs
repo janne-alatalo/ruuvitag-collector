@@ -14,10 +14,10 @@ pub enum ConsumerType {
 }
 
 pub trait Consumer {
-    fn consume(&mut self, sensors: &[&BTSensor]);
+    fn consume(&mut self, sensors: &[&dyn BTSensor]);
 }
 
-pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>, String> {
+pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<dyn Consumer>, String> {
     match consumer_name {
         ConsumerType::StdOut => {
             Ok(Box::new(StdOutConsumer{}))
@@ -34,7 +34,7 @@ pub fn initialize_consumer(consumer_name: &ConsumerType) -> Result<Box<Consumer>
 pub struct StdOutConsumer;
 
 impl Consumer for StdOutConsumer {
-    fn consume(&mut self, sensors: &[&BTSensor]) {
+    fn consume(&mut self, sensors: &[&dyn BTSensor]) {
         for sensor in sensors {
             if sensor.get_bt_device().is_upto_date() {
                 match sensor.get_measurements_str() {
@@ -52,7 +52,7 @@ impl Consumer for StdOutConsumer {
 pub struct StdOutJsonConsumer;
 
 impl Consumer for StdOutJsonConsumer {
-    fn consume(&mut self, sensors: &[&BTSensor]) {
+    fn consume(&mut self, sensors: &[&dyn BTSensor]) {
         for sensor in sensors {
             if sensor.get_bt_device().is_upto_date() {
                 match sensor.get_measurements_json_str() {
@@ -91,7 +91,7 @@ impl InfluxdbConsumer {
 }
 
 impl Consumer for InfluxdbConsumer {
-    fn consume(&mut self, sensors: &[&BTSensor]) {
+    fn consume(&mut self, sensors: &[&dyn BTSensor]) {
         let mut points_vec = Vec::<Point>::new();
         for sensor in sensors {
             if !sensor.get_bt_device().is_upto_date() {
