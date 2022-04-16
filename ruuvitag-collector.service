@@ -1,7 +1,7 @@
 [Unit]
 Description=ruuvitag-collector
 After=dbus.socket bluetooth.target network.target
-Wants=bluetooth.target
+Requires=bluetooth.target
 
 [Service]
 EnvironmentFile=/etc/default/ruuvitag-collector
